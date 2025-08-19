@@ -3,6 +3,10 @@ import ReactDOM from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
 
+// Map dependencies
+import 'leaflet/dist/leaflet.css'
+import 'leaflet-control-geocoder/dist/Control.Geocoder.css'
+
 function Home(){ return <h1 className="text-2xl font-semibold">Home</h1> }
 function Search(){ return <h1 className="text-2xl font-semibold">Search</h1> }
 
