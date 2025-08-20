@@ -7,6 +7,8 @@ class User(AbstractUser):
         ('buyer', 'Buyer'),
         ('seller', 'Seller'),
     )
+    email = models.EmailField(unique=True, null=False, blank=False)
+
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='buyer')
 
     def __str__(self):

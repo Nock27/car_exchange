@@ -12,6 +12,9 @@ class Category(models.Model):
     name = models.CharField(max_length=50, unique=True)  # e.g., Car, Motorcycle, Truck
     def __str__(self): return self.name
 
+    class Meta:
+        verbose_name_plural = "Categories"
+
 class Brand(models.Model):
     name = models.CharField(max_length=80, unique=True)
     def __str__(self): return self.name
@@ -89,7 +92,7 @@ class Listing(models.Model):
 
     # Moderation & lifecycle
     status      = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
-    is_active   = models.BooleanField(default=True)
+    is_active   = models.BooleanField(default=False)
     created_at  = models.DateTimeField(auto_now_add=True)
     updated_at  = models.DateTimeField(auto_now=True)
     expires_at  = models.DateTimeField(null=True, blank=True, default=default_expires, editable=False)
@@ -113,6 +116,24 @@ class Listing(models.Model):
         ]
 
     def __str__(self): return self.title
+
+    def save(self, *args, **kwargs):
+        # keep is_active in sync with status
+        if self.status == self.Status.APPROVED:
+            self.is_active = True
+        elif self.status in {self.Status.PENDING, self.Status.REJECTED, self.Status.EXPIRED}:
+            self.is_active = False
+        super().save(*args, **kwargs)
+
+    def approve(self):
+        self.status = self.Status.APPROVED
+        self.is_active = True
+        self.save(update_fields=["status", "is_active"])
+
+    def reject(self):
+        self.status = self.Status.REJECTED
+        self.is_active = False
+        self.save(update_fields=["status", "is_active"])
 
 class ListingImage(models.Model):
     listing = models.ForeignKey(Listing, on_delete=models.CASCADE, related_name="images")

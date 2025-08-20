@@ -2,7 +2,7 @@ from rest_framework import viewsets, permissions, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Q
 from .permissions import IsSellerOrReadOnly, IsOwnerOrAdmin
 from .filters import ListingFilter
 
@@ -50,13 +50,28 @@ class ListingViewSet(viewsets.ModelViewSet):
         # Assign logged-in user as seller and set initial status to 'pending'
         serializer.save(seller=self.request.user, status="pending")
 
+
+    def perform_update(self, serializer):
+        instance = self.get_object()
+        # sellers cannot self-approve and cannot change seller
+        if not (self.request.user.is_staff or self.request.user.is_superuser):
+            serializer.save(status=instance.status, seller=instance.seller)
+        else:
+            serializer.save()
+
     def get_queryset(self):
-        return (
+        qs = (
             Listing.objects
             .select_related("brand","model","city","fuel_type","transmission","body_type","drive_type","seller")
             .prefetch_related(Prefetch("images", queryset=ListingImage.objects.order_by("order")))
             .order_by("-created_at")
         )
+        u = self.request.user
+        if not u.is_authenticated:
+            return qs.filter(status="approved", is_active=True)
+        if u.is_staff or u.is_superuser:
+            return qs
+        return qs.filter(Q(status="approved", is_active=True) | Q(seller=u))
 
     # Upload a single image (multipart/form-data: image=<file>)
     @action(detail=True, methods=["post"], url_path="upload_image")
@@ -71,6 +86,11 @@ class ListingViewSet(viewsets.ModelViewSet):
 
         if not file.content_type.startswith("image/"):
             return Response({"detail":"Only image files allowed."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # optional: size guard (e.g., 8MB)
+        MAX_MB = 8
+        if file.size > MAX_MB * 1024 * 1024:
+            return Response({"detail": f"Max image size is {MAX_MB}MB."}, status=status.HTTP_400_BAD_REQUEST)
 
         img = ListingImage.objects.create(listing=listing, image=file, order=listing.images.count())
         return Response(ListingImageSerializer(img).data, status=status.HTTP_201_CREATED)
