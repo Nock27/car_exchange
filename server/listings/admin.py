@@ -45,6 +45,32 @@ class ListingAdmin(admin.ModelAdmin):
     autocomplete_fields = ("brand","model","city","seller")
     inlines = [ListingImageInline]
     date_hierarchy = "created_at"
+    actions = ["approve_listings", "reject_listings"]
+
+    def approve_listings(self, request, queryset):
+        updated = 0
+        for listing in queryset:
+            listing.approve()
+            updated += 1
+        self.message_user(request, f"Approved {updated} listing(s).")
+    approve_listings.short_description = "Approve selected listings"
+
+    def reject_listings(self, request, queryset):
+        updated = 0
+        for listing in queryset:
+            listing.reject()
+            updated += 1
+        self.message_user(request, f"Rejected {updated} listing(s).")
+    reject_listings.short_description = "Reject selected listings"
+
+    def save_model(self, request, obj, form, change):
+        # keep is_active consistent when saving via the admin form
+        if obj.status == obj.Status.APPROVED:
+            obj.is_active = True
+        else:
+            obj.is_active = False
+        super().save_model(request, obj, form, change)
+
 
 @admin.register(ListingImage)
 class ListingImageAdmin(admin.ModelAdmin):
