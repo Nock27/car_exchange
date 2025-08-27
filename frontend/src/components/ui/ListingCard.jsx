@@ -1,37 +1,56 @@
-import { Link } from 'react-router-dom'
+import Card from './Card'
+import Button from './Button'
 
 export default function ListingCard({
-  id,
-  title,
-  price,
-  year,
-  mileage,
-  city,
-  thumbnailUrl, // optional image
-  brandName,
-  modelName,
+  image = null,
+  title = '2018 BMW 320d',
+  price = '€15,900',
+  specs = 'Diesel • 180,000 km • Automatic',
+  location = 'Sofia, Bulgaria',
+  onView = () => {},
 }) {
   return (
-    <Link to={`/listing/${id}`} className="block border rounded overflow-hidden bg-white hover:shadow">
-      <div className="aspect-[4/3] bg-gray-100">
-        {thumbnailUrl ? (
-          <img src={thumbnailUrl} alt={title} className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">No image</div>
-        )}
-      </div>
-      <div className="p-3">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold line-clamp-1">{title}</h3>
-          <div className="text-blue-700 font-bold">{price ? `${price} лв.` : '—'}</div>
+    <Card className="p-4">
+      <div className="grid grid-cols-[120px_1fr] gap-4">
+        <div className="overflow-hidden rounded-xl bg-neutral-100 dark:bg-gray-800">
+          {image ? (
+            <img src={image} alt={title} className="h-24 w-full object-cover" />
+          ) : (
+            <div className="flex h-24 w-full items-center justify-center text-xs text-neutral-500">
+              No image
+            </div>
+          )}
         </div>
-        <div className="mt-1 text-xs text-gray-600">
-          {(brandName || modelName) && <span>{brandName} {modelName}</span>}
-          {year && <span> · {year}</span>}
-          {mileage && <span> · {Number(mileage).toLocaleString()} km</span>}
-          {city && <span> · {city}</span>}
+        <div className="flex min-w-0 flex-col">
+          <div className="flex justify-between gap-3">
+            <h3 className="truncate text-base font-semibold text-neutral-900 dark:text-white">
+              {title}
+            </h3>
+            <div className="shrink-0 text-brand-600 dark:text-brand-400 font-semibold">{price}</div>
+          </div>
+          <div className="mt-1 truncate text-sm text-neutral-600 dark:text-neutral-300">{specs}</div>
+          <div className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">{location}</div>
+          <div className="mt-3">
+            <Button onClick={onView} className="px-3 py-1.5">View details</Button>
+          </div>
         </div>
       </div>
-    </Link>
+    </Card>
+  )
+}
+
+export function ListingCardSkeleton() {
+  return (
+    <Card className="p-4 animate-pulse">
+      <div className="grid grid-cols-[120px_1fr] gap-4">
+        <div className="h-24 w-full rounded-xl bg-neutral-200 dark:bg-gray-800" />
+        <div className="space-y-2">
+          <div className="h-4 w-2/3 rounded bg-neutral-200 dark:bg-gray-800" />
+          <div className="h-3 w-1/2 rounded bg-neutral-200 dark:bg-gray-800" />
+          <div className="h-3 w-1/3 rounded bg-neutral-200 dark:bg-gray-800" />
+          <div className="h-8 w-24 rounded-lg bg-neutral-200 dark:bg-gray-800" />
+        </div>
+      </div>
+    </Card>
   )
 }
