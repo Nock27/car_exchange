@@ -2,15 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
-/* app-level tweaks */
-:root {
-  --radius: 14px;
-}
-
-html, body, #root {
-  height: 100%;
-}
+/* Keep your existing choices; just add dark counterparts */
+html, body, #root { height: 100%; }
 
 body {
-  @apply bg-white text-neutral-900;
+  @apply bg-white text-neutral-900 dark:bg-gray-950 dark:text-gray-100;
 }
