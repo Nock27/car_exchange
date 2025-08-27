@@ -5,43 +5,41 @@ import Select from '@/components/ui/Select'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import ListingCard, { ListingCardSkeleton } from '@/components/ui/ListingCard'
+import { Link } from 'react-router-dom'
 
 export default function Search() {
-  // UI-only state (wire to API later)
   const [filtersOpen, setFiltersOpen] = useState(true)
-  const [loading, setLoading] = useState(false)
+  const [loading] = useState(false)
 
   return (
     <div className="py-6">
       <Container>
         <SectionHeader
           title="Search results"
-          subtitle="Use filters to narrow down vehicles. (UI shell — API will be wired next steps)"
+          subtitle="Use filters to narrow down vehicles."
           actions={
-            <Button
-              variant="secondary"
-              onClick={() => setFiltersOpen(v => !v)}
-              className="px-3 py-1.5"
-              aria-expanded={filtersOpen}
-              aria-controls="filters-panel"
-            >
-              {filtersOpen ? 'Hide filters' : 'Show filters'}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Link to="/advanced-search" className="hidden md:inline text-sm text-info-500 hover:underline">
+                Advanced search
+              </Link>
+              <Button
+                variant="secondary"
+                onClick={() => setFiltersOpen(v => !v)}
+                className="px-3 py-1.5"
+                aria-expanded={filtersOpen}
+                aria-controls="filters-panel"
+              >
+                {filtersOpen ? 'Hide filters' : 'Show filters'}
+              </Button>
+            </div>
           }
         />
 
-        {/* IMPORTANT: change grid cols based on filtersOpen */}
-        <div
-          className={`grid gap-6 ${
-            filtersOpen ? 'md:grid-cols-[280px_1fr]' : 'md:grid-cols-1'
-          }`}
-        >
-          {/* Filters panel */}
+        <div className={`grid gap-6 ${filtersOpen ? 'md:grid-cols-[280px_1fr]' : 'md:grid-cols-1'}`}>
           {filtersOpen && (
             <aside
               id="filters-panel"
-              className="space-y-3 rounded-2xl border border-neutral-200 bg-white/70 p-4 shadow-sm backdrop-blur
-                         dark:border-gray-800 dark:bg-gray-900/70"
+              className="space-y-3 rounded-2xl border border-neutral-200 bg-white/70 p-4 shadow-sm backdrop-blur dark:border-gray-800 dark:bg-gray-900/70"
             >
               <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">Filters</h3>
 
@@ -107,12 +105,14 @@ export default function Search() {
                 <Button className="flex-1">Apply</Button>
                 <Button variant="secondary" className="flex-1">Reset</Button>
               </div>
+
+              <Link to="/advanced-search" className="block pt-2 text-sm text-info-500 hover:underline">
+                Need more filters? Open Advanced search →
+              </Link>
             </aside>
           )}
 
-          {/* Results area */}
           <section aria-live="polite">
-            {/* Sorting + count bar */}
             <div className="mb-3 flex items-center justify-between gap-3">
               <p className="text-sm text-neutral-600 dark:text-neutral-300">
                 Showing <span className="font-medium">12</span> results
@@ -126,13 +126,10 @@ export default function Search() {
               </Select>
             </div>
 
-            {/* Grid (placeholder data) */}
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {loading ? (
                 <>
-                  <ListingCardSkeleton />
-                  <ListingCardSkeleton />
-                  <ListingCardSkeleton />
+                  <ListingCardSkeleton /><ListingCardSkeleton /><ListingCardSkeleton />
                 </>
               ) : (
                 <>
@@ -146,7 +143,6 @@ export default function Search() {
               )}
             </div>
 
-            {/* Pagination (UI only) */}
             <div className="mt-6 flex justify-center gap-2">
               <Button variant="secondary" className="px-3 py-1.5">« Prev</Button>
               <Button className="px-3 py-1.5">Next »</Button>
