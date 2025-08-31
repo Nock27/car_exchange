@@ -3,6 +3,8 @@ import { Link, NavLink } from 'react-router-dom'
 import Container from './Container'
 import logo from '@/assets/autodeal_logo.png'
 import ThemeToggle from '@/components/ui/ThemeToggle'
+import { useAuth } from '@/context/AuthContext'
+import Button from '@/components/ui/Button'
 
 const linkBase =
   'inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors'
@@ -31,6 +33,7 @@ function NavItem({ to, children, onClick }) {
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
+  const { isAuthed, user, logout } = useAuth()
 
   return (
     <header
@@ -40,7 +43,7 @@ export default function Navbar() {
       "
     >
       <Container className="flex h-16 items-center justify-between">
-        {/* Logo (left) - responsive size */}
+        {/* Logo */}
         <Link to="/" className="flex items-center" aria-label="Go to homepage">
           <img
             src={logo}
@@ -49,25 +52,41 @@ export default function Navbar() {
           />
         </Link>
 
-        {/* Desktop nav */}
+        {/* Desktop */}
         <nav className="hidden items-center gap-1 md:flex" aria-label="Primary">
           <NavItem to="/search">Browse</NavItem>
-          <NavItem to="/my-listings">My Listings</NavItem>
-          <NavItem to="/create-listing">
-            <span className="text-brand-700 dark:text-brand-400">Post Listing</span>
-          </NavItem>
 
-          <div className="mx-3 h-6 w-px bg-neutral-200 dark:bg-gray-700" />
+          {isAuthed && <NavItem to="/my-listings">My Listings</NavItem>}
+          {isAuthed && (
+            <NavItem to="/create-listing">
+              <span className="text-brand-700 dark:text-brand-400">Post Listing</span>
+            </NavItem>
+          )}
 
-          <NavItem to="/login">Login</NavItem>
-          <NavItem to="/register">Register</NavItem>
+          {!isAuthed && (
+            <>
+              <NavItem to="/login">Login</NavItem>
+              <NavItem to="/register">Register</NavItem>
+            </>
+          )}
+
+          {isAuthed && (
+            <>
+              <span className="mx-2 text-sm text-neutral-500 dark:text-neutral-400">
+                {user?.name || user?.email}
+              </span>
+              <Button variant="secondary" className="px-3 py-1.5" onClick={logout}>
+                Logout
+              </Button>
+            </>
+          )}
 
           <div className="ml-2">
             <ThemeToggle />
           </div>
         </nav>
 
-        {/* Mobile menu button */}
+        {/* Mobile */}
         <button
           className="inline-flex items-center rounded-md p-2 text-neutral-700 hover:bg-neutral-100 md:hidden
                      dark:text-neutral-200 dark:hover:bg-gray-800"
@@ -76,14 +95,7 @@ export default function Navbar() {
           aria-expanded={open}
           onClick={() => setOpen(v => !v)}
         >
-          <svg
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-            className="h-6 w-6"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
+          <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2">
             {open ? (
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             ) : (
@@ -93,20 +105,32 @@ export default function Navbar() {
         </button>
       </Container>
 
-      {/* Mobile nav panel */}
       {open && (
         <div id="mobile-menu" className="border-t bg-white md:hidden dark:border-gray-800 dark:bg-gray-950">
           <Container className="flex flex-col gap-1 py-2">
             <NavItem to="/search" onClick={() => setOpen(false)}>Browse</NavItem>
-            <NavItem to="/my-listings" onClick={() => setOpen(false)}>My Listings</NavItem>
-            <NavItem to="/create-listing" onClick={() => setOpen(false)}>
-              <span className="text-brand-700 dark:text-brand-400">Post Listing</span>
-            </NavItem>
 
-            <div className="my-2 h-px w-full bg-neutral-200 dark:bg-gray-700" />
+            {isAuthed && (
+              <>
+                <NavItem to="/my-listings" onClick={() => setOpen(false)}>My Listings</NavItem>
+                <NavItem to="/create-listing" onClick={() => setOpen(false)}>
+                  <span className="text-brand-700 dark:text-brand-400">Post Listing</span>
+                </NavItem>
+              </>
+            )}
 
-            <NavItem to="/login" onClick={() => setOpen(false)}>Login</NavItem>
-            <NavItem to="/register" onClick={() => setOpen(false)}>Register</NavItem>
+            {!isAuthed && (
+              <>
+                <NavItem to="/login" onClick={() => setOpen(false)}>Login</NavItem>
+                <NavItem to="/register" onClick={() => setOpen(false)}>Register</NavItem>
+              </>
+            )}
+
+            {isAuthed && (
+              <Button variant="secondary" className="mt-1 px-3 py-1.5" onClick={() => { logout(); setOpen(false) }}>
+                Logout
+              </Button>
+            )}
 
             <div className="mt-2">
               <ThemeToggle />
