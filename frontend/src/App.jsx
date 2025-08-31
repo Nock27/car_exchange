@@ -21,7 +21,7 @@ export default function App() {
         <Route path="/advanced-search" element={<AdvancedSearch />} />
         <Route path="/listing/:id" element={<ListingDetails />} />
 
-        {/* Protected area */}
+        {/* Protected (seller actions) */}
         <Route element={<RequireAuth />}>
           <Route path="/create-listing" element={<CreateListing />} />
           <Route path="/my-listings" element={<MyListings />} />

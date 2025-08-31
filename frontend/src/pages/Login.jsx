@@ -12,7 +12,7 @@ export default function Login() {
   const loc = useLocation()
   const redirectTo = loc.state?.from || '/'
 
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -22,10 +22,10 @@ export default function Login() {
     setError('')
     setLoading(true)
     try {
-      await login(email.trim(), password)
+      await login(username.trim(), password)
       navigate(redirectTo, { replace: true })
     } catch (err) {
-      setError(err?.response?.data?.message || 'Invalid credentials')
+      setError(err?.response?.data?.detail || err?.message || 'Invalid credentials')
     } finally {
       setLoading(false)
     }
@@ -37,7 +37,7 @@ export default function Login() {
         <Card>
           <h1 className="mb-2 text-2xl font-semibold text-neutral-900 dark:text-white">Login</h1>
           <p className="mb-6 text-sm text-neutral-600 dark:text-neutral-300">
-            Welcome back. Enter your account details.
+            Sign in with your username and password.
           </p>
 
           {error && (
@@ -48,12 +48,11 @@ export default function Login() {
 
           <form onSubmit={onSubmit} className="space-y-3">
             <div>
-              <label className="mb-1 block text-sm text-neutral-700 dark:text-neutral-200">Email</label>
+              <label className="mb-1 block text-sm text-neutral-700 dark:text-neutral-200">Username</label>
               <Input
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
                 required
               />
             </div>

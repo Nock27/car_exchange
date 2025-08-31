@@ -34,6 +34,7 @@ function NavItem({ to, children, onClick }) {
 export default function Navbar() {
   const [open, setOpen] = useState(false)
   const { isAuthed, user, logout } = useAuth()
+  const isSeller = isAuthed && user?.role === 'seller'
 
   return (
     <header
@@ -56,8 +57,8 @@ export default function Navbar() {
         <nav className="hidden items-center gap-1 md:flex" aria-label="Primary">
           <NavItem to="/search">Browse</NavItem>
 
-          {isAuthed && <NavItem to="/my-listings">My Listings</NavItem>}
-          {isAuthed && (
+          {isSeller && <NavItem to="/my-listings">My Listings</NavItem>}
+          {isSeller && (
             <NavItem to="/create-listing">
               <span className="text-brand-700 dark:text-brand-400">Post Listing</span>
             </NavItem>
@@ -72,8 +73,8 @@ export default function Navbar() {
 
           {isAuthed && (
             <>
-              <span className="mx-2 text-sm text-neutral-500 dark:text-neutral-400">
-                {user?.name || user?.email}
+              <span className="mx-2 max-w-[160px] truncate text-sm text-neutral-500 dark:text-neutral-400">
+                {user?.username}
               </span>
               <Button variant="secondary" className="px-3 py-1.5" onClick={logout}>
                 Logout
@@ -110,7 +111,7 @@ export default function Navbar() {
           <Container className="flex flex-col gap-1 py-2">
             <NavItem to="/search" onClick={() => setOpen(false)}>Browse</NavItem>
 
-            {isAuthed && (
+            {isSeller && (
               <>
                 <NavItem to="/my-listings" onClick={() => setOpen(false)}>My Listings</NavItem>
                 <NavItem to="/create-listing" onClick={() => setOpen(false)}>

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
-import { api, setToken, getToken } from '@/lib/api'
+import { api, endpoints, setTokens, getAccess } from '@/lib/api'
 
 const AuthContext = createContext(null)
 
@@ -10,16 +10,16 @@ export function AuthProvider({ children }) {
   // Restore session
   useEffect(() => {
     const init = async () => {
-      const token = getToken()
-      if (!token) {
+      const access = getAccess()
+      if (!access) {
         setLoading(false)
         return
       }
       try {
-        const { data } = await api.get('/auth/me')
+        const { data } = await api.get(endpoints.me)
         setUser(data?.user ?? data)
       } catch {
-        setToken(null)
+        setTokens({ access: null, refresh: null })
         setUser(null)
       } finally {
         setLoading(false)
@@ -28,38 +28,32 @@ export function AuthProvider({ children }) {
     init()
   }, [])
 
-  const login = async (email, password) => {
-    const { data } = await api.post('/auth/login', { email, password })
-    // Expect either { token, user } or just { token }:
-    if (data?.token) setToken(data.token)
-    if (data?.user) setUser(data.user)
-    else {
-      // fetch profile if not returned in login
-      const me = await api.get('/auth/me')
-      setUser(me.data?.user ?? me.data)
-    }
+  const login = async (username, password) => {
+    // SimpleJWT expects username + password
+    const { data } = await api.post(endpoints.login, { username, password })
+    const access = data?.access
+    const refresh = data?.refresh
+    if (!access) throw new Error('No access token returned')
+    setTokens({ access, refresh })
+    const me = await api.get(endpoints.me)
+    setUser(me.data?.user ?? me.data)
     return true
   }
 
-  const register = async (payload) => {
-    const { data } = await api.post('/auth/register', payload)
-    // Option A: auto-login if API returns token
-    if (data?.token) setToken(data.token)
-    if (data?.user) setUser(data.user)
-    else if (data?.token) {
-      const me = await api.get('/auth/me')
-      setUser(me.data?.user ?? me.data)
-    }
+  const register = async ({ username, email, password, role }) => {
+    await api.post(endpoints.register, { username, email, password, role })
+    // Auto-login after register
+    await login(username, password)
     return true
   }
 
   const logout = () => {
-    setToken(null)
+    setTokens({ access: null, refresh: null })
     setUser(null)
   }
 
   const value = useMemo(
-    () => ({ user, loading, login, register, logout, isAuthed: !!user }),
+    () => ({ user, loading, isAuthed: !!user, login, register, logout }),
     [user, loading]
   )
 
