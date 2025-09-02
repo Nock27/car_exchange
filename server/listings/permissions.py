@@ -5,9 +5,9 @@ class IsSellerOrReadOnly(permissions.BasePermission):
         # SAFE methods are read-only
         if request.method in permissions.SAFE_METHODS:
             return True
-        # else must be authenticated seller
+        # Both 'private' and 'dealer' can create/edit their listings
         u = request.user
-        return u.is_authenticated and getattr(u, "role", None) == "seller"
+        return u.is_authenticated and getattr(u, "role", None) in ("private", "dealer")
 
 class IsOwnerOrAdmin(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):

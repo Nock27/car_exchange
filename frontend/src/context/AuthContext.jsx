@@ -10,8 +10,8 @@ export function AuthProvider({ children }) {
   // Restore session
   useEffect(() => {
     const init = async () => {
-      const access = getAccess()
-      if (!access) {
+      const token = getAccess()
+      if (!token) {
         setLoading(false)
         return
       }
@@ -29,20 +29,17 @@ export function AuthProvider({ children }) {
   }, [])
 
   const login = async (username, password) => {
-    // SimpleJWT expects username + password
     const { data } = await api.post(endpoints.login, { username, password })
     const access = data?.access
     const refresh = data?.refresh
     if (!access) throw new Error('No access token returned')
     setTokens({ access, refresh })
-    const me = await api.get(endpoints.me)
-    setUser(me.data?.user ?? me.data)
+    setUser(data?.user || (await api.get(endpoints.me)).data)
     return true
   }
 
   const register = async ({ username, email, password, role }) => {
     await api.post(endpoints.register, { username, email, password, role })
-    // Auto-login after register
     await login(username, password)
     return true
   }

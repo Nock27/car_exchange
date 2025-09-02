@@ -36,11 +36,7 @@ export default function Login() {
   }
 
   const clearErrors = () => {
-    setFieldErrors({
-      username: '',
-      password: '',
-      non_field_errors: '',
-    })
+    setFieldErrors({ username: '', password: '', non_field_errors: '' })
     setTopError('')
   }
 
@@ -53,11 +49,7 @@ export default function Login() {
       navigate(redirectTo, { replace: true })
     } catch (err) {
       const data = err?.response?.data
-      const newErrs = {
-        username: '',
-        password: '',
-        non_field_errors: '',
-      }
+      const newErrs = { username: '', password: '', non_field_errors: '' }
 
       if (data && typeof data === 'object') {
         for (const [key, val] of Object.entries(data)) {
@@ -82,14 +74,11 @@ export default function Login() {
     <Container className="py-10">
       <div className="mx-auto w-full max-w-md">
         <Card>
-          <h1 className="mb-2 text-2xl font-semibold text-neutral-900 dark:text-white">
-            Login
-          </h1>
+          <h1 className="mb-2 text-2xl font-semibold text-neutral-900 dark:text-white">Login</h1>
           <p className="mb-6 text-sm text-neutral-600 dark:text-neutral-300">
             Sign in with your username and password.
           </p>
 
-          {/* Single top error */}
           {topError && (
             <div className="mb-4 rounded-lg border border-danger-600 bg-danger-600/10 p-3 text-sm text-danger-600 dark:border-danger-600 dark:bg-danger-600/20">
               {topError}
@@ -97,11 +86,8 @@ export default function Login() {
           )}
 
           <form onSubmit={onSubmit} className="space-y-4">
-            {/* Username */}
             <div>
-              <label className="mb-1 block text-sm text-neutral-700 dark:text-neutral-200">
-                Username
-              </label>
+              <label className="mb-1 block text-sm text-neutral-700 dark:text-neutral-200">Username</label>
               <Input
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -111,17 +97,12 @@ export default function Login() {
                 required
               />
               {fieldErrors.username && (
-                <p id="err-username" className="mt-1 text-xs text-danger-600">
-                  {fieldErrors.username}
-                </p>
+                <p id="err-username" className="mt-1 text-xs text-danger-600">{fieldErrors.username}</p>
               )}
             </div>
 
-            {/* Password */}
             <div>
-              <label className="mb-1 block text-sm text-neutral-700 dark:text-neutral-200">
-                Password
-              </label>
+              <label className="mb-1 block text-sm text-neutral-700 dark:text-neutral-200">Password</label>
               <Input
                 type="password"
                 autoComplete="current-password"
@@ -132,9 +113,7 @@ export default function Login() {
                 required
               />
               {fieldErrors.password && (
-                <p id="err-password" className="mt-1 text-xs text-danger-600">
-                  {fieldErrors.password}
-                </p>
+                <p id="err-password" className="mt-1 text-xs text-danger-600">{fieldErrors.password}</p>
               )}
             </div>
 
@@ -145,9 +124,7 @@ export default function Login() {
 
           <p className="mt-4 text-sm text-neutral-600 dark:text-neutral-300">
             Don&apos;t have an account?{' '}
-            <Link to="/register" className="text-info-500 hover:underline">
-              Register
-            </Link>
+            <Link to="/register" className="text-info-500 hover:underline">Register</Link>
           </p>
         </Card>
       </div>
@@ -155,7 +132,6 @@ export default function Login() {
   )
 }
 
-/* ------------------------------ helpers ------------------------------ */
 function capitalize(s) {
   if (!s) return s
   return s.charAt(0).toUpperCase() + s.slice(1).replaceAll('_', ' ')

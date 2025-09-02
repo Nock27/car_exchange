@@ -13,13 +13,12 @@ export default function Register() {
 
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
-  const [role, setRole] = useState('buyer') // 'buyer' | 'seller'
+  const [role, setRole] = useState('private') // 'private' | 'dealer'
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
 
   const [loading, setLoading] = useState(false)
 
-  // Field-level errors from server or client validation
   const [fieldErrors, setFieldErrors] = useState({
     username: '',
     email: '',
@@ -28,12 +27,9 @@ export default function Register() {
     confirm: '',
     non_field_errors: '',
   })
-
-  // Single top error (only one at a time)
   const [topError, setTopError] = useState('')
 
   const setOneTopErrorFromFields = (errsObj) => {
-    // Prefer a specific field first, then non_field_errors
     const order = ['username', 'email', 'password', 'confirm', 'role', 'non_field_errors']
     for (const key of order) {
       if (errsObj[key]) {
@@ -42,7 +38,7 @@ export default function Register() {
         return
       }
     }
-    setTopError('') // fallback
+    setTopError('')
   }
 
   const clearErrors = () => {
@@ -61,16 +57,8 @@ export default function Register() {
     e.preventDefault()
     clearErrors()
 
-    // Client-side checks first
     if (password !== confirm) {
-      const newErrs = {
-        username: '',
-        email: '',
-        role: '',
-        password: '',
-        confirm: 'Passwords do not match.',
-        non_field_errors: '',
-      }
+      const newErrs = { ...fieldErrors, confirm: 'Passwords do not match.' }
       setFieldErrors(newErrs)
       setOneTopErrorFromFields(newErrs)
       return
@@ -86,20 +74,9 @@ export default function Register() {
       })
       navigate('/', { replace: true })
     } catch (err) {
-      // Normalize DRF error shapes to fieldErrors
       const data = err?.response?.data
-      const newErrs = {
-        username: '',
-        email: '',
-        role: '',
-        password: '',
-        confirm: '',
-        non_field_errors: '',
-      }
-
+      const newErrs = { ...fieldErrors }
       if (data && typeof data === 'object') {
-        // Example: { "email": ["user with this email already exists."] }
-        // or { "password": ["Ensure this field has at least 6 characters."] }
         for (const [key, val] of Object.entries(data)) {
           const msg = Array.isArray(val) ? String(val[0]) : String(val)
           if (key in newErrs) newErrs[key] = msg
@@ -110,7 +87,6 @@ export default function Register() {
       } else {
         newErrs.non_field_errors = err?.message || 'Registration failed'
       }
-
       setFieldErrors(newErrs)
       setOneTopErrorFromFields(newErrs)
     } finally {
@@ -122,14 +98,11 @@ export default function Register() {
     <Container className="py-10">
       <div className="mx-auto w-full max-w-md">
         <Card>
-          <h1 className="mb-2 text-2xl font-semibold text-neutral-900 dark:text-white">
-            Create account
-          </h1>
+          <h1 className="mb-2 text-2xl font-semibold text-neutral-900 dark:text-white">Create account</h1>
           <p className="mb-6 text-sm text-neutral-600 dark:text-neutral-300">
-            Choose your role to match what you need.
+            Join to post and manage your listings.
           </p>
 
-          {/* Single top error only (first relevant field) */}
           {topError && (
             <div className="mb-4 rounded-lg border border-danger-600 bg-danger-600/10 p-3 text-sm text-danger-600 dark:border-danger-600 dark:bg-danger-600/20">
               {topError}
@@ -137,31 +110,20 @@ export default function Register() {
           )}
 
           <form onSubmit={onSubmit} className="space-y-4">
-            {/* Username */}
-            <div>
-              <label className="mb-1 block text-sm text-neutral-700 dark:text-neutral-200">
-                Username
-              </label>
+            <Field label="Username" error={fieldErrors.username} id="username">
               <Input
+                id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 aria-invalid={!!fieldErrors.username}
                 aria-describedby={fieldErrors.username ? 'err-username' : undefined}
                 required
               />
-              {fieldErrors.username && (
-                <p id="err-username" className="mt-1 text-xs text-danger-600">
-                  {fieldErrors.username}
-                </p>
-              )}
-            </div>
+            </Field>
 
-            {/* Email */}
-            <div>
-              <label className="mb-1 block text-sm text-neutral-700 dark:text-neutral-200">
-                Email
-              </label>
+            <Field label="Email" error={fieldErrors.email} id="email">
               <Input
+                id="email"
                 type="email"
                 autoComplete="email"
                 value={email}
@@ -170,40 +132,24 @@ export default function Register() {
                 aria-describedby={fieldErrors.email ? 'err-email' : undefined}
                 required
               />
-              {fieldErrors.email && (
-                <p id="err-email" className="mt-1 text-xs text-danger-600">
-                  {fieldErrors.email}
-                </p>
-              )}
-            </div>
+            </Field>
 
-            {/* Role */}
-            <div>
-              <label className="mb-1 block text-sm text-neutral-700 dark:text-neutral-200">
-                Role
-              </label>
+            <Field label="Role" error={fieldErrors.role} id="role">
               <Select
+                id="role"
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
                 aria-invalid={!!fieldErrors.role}
                 aria-describedby={fieldErrors.role ? 'err-role' : undefined}
               >
-                <option value="buyer">Buyer</option>
-                <option value="seller">Seller</option>
+                <option value="private">Private individual</option>
+                <option value="dealer">Dealer</option>
               </Select>
-              {fieldErrors.role && (
-                <p id="err-role" className="mt-1 text-xs text-danger-600">
-                  {fieldErrors.role}
-                </p>
-              )}
-            </div>
+            </Field>
 
-            {/* Password */}
-            <div>
-              <label className="mb-1 block text-sm text-neutral-700 dark:text-neutral-200">
-                Password
-              </label>
+            <Field label="Password" error={fieldErrors.password} id="password">
               <Input
+                id="password"
                 type="password"
                 autoComplete="new-password"
                 value={password}
@@ -212,19 +158,11 @@ export default function Register() {
                 aria-describedby={fieldErrors.password ? 'err-password' : undefined}
                 required
               />
-              {fieldErrors.password && (
-                <p id="err-password" className="mt-1 text-xs text-danger-600">
-                  {fieldErrors.password}
-                </p>
-              )}
-            </div>
+            </Field>
 
-            {/* Confirm */}
-            <div>
-              <label className="mb-1 block text-sm text-neutral-700 dark:text-neutral-200">
-                Confirm password
-              </label>
+            <Field label="Confirm password" error={fieldErrors.confirm} id="confirm">
               <Input
+                id="confirm"
                 type="password"
                 autoComplete="new-password"
                 value={confirm}
@@ -233,12 +171,7 @@ export default function Register() {
                 aria-describedby={fieldErrors.confirm ? 'err-confirm' : undefined}
                 required
               />
-              {fieldErrors.confirm && (
-                <p id="err-confirm" className="mt-1 text-xs text-danger-600">
-                  {fieldErrors.confirm}
-                </p>
-              )}
-            </div>
+            </Field>
 
             <Button disabled={loading} className="w-full">
               {loading ? 'Creating account…' : 'Register'}
@@ -247,9 +180,7 @@ export default function Register() {
 
           <p className="mt-4 text-sm text-neutral-600 dark:text-neutral-300">
             Already have an account?{' '}
-            <Link to="/login" className="text-info-500 hover:underline">
-              Login
-            </Link>
+            <Link to="/login" className="text-info-500 hover:underline">Login</Link>
           </p>
         </Card>
       </div>
@@ -257,7 +188,17 @@ export default function Register() {
   )
 }
 
-/* ------------------------------ helpers ------------------------------ */
+function Field({ label, error, id, children }) {
+  return (
+    <div>
+      <label htmlFor={id} className="mb-1 block text-sm text-neutral-700 dark:text-neutral-200">
+        {label}
+      </label>
+      {children}
+      {error && <p id={`err-${id}`} className="mt-1 text-xs text-danger-600">{error}</p>}
+    </div>
+  )
+}
 
 function capitalize(s) {
   if (!s) return s
