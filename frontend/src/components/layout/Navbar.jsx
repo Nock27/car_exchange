@@ -40,14 +40,11 @@ export default function Navbar() {
 
         <nav className="hidden items-center gap-1 md:flex" aria-label="Primary">
           <NavItem to="/search">Browse</NavItem>
+          <NavItem to="/advanced-search">Advanced Search</NavItem>
 
-          {/* Both roles can sell now */}
           {isAuthed && <NavItem to="/my-listings">My Listings</NavItem>}
-          {isAuthed && (
-            <NavItem to="/create-listing">
-              <span className="text-brand-700 dark:text-brand-400">Post Listing</span>
-            </NavItem>
-          )}
+          {isAuthed && <NavItem to="/create-listing"><span className="text-brand-700 dark:text-brand-400">Post Listing</span></NavItem>}
+          {isAuthed && <NavItem to="/profile">Profile</NavItem>}
 
           {!isAuthed && (
             <>
@@ -61,7 +58,7 @@ export default function Navbar() {
               <span className="mx-2 max-w-[160px] truncate text-sm text-neutral-500 dark:text-neutral-400">
                 {user?.username}
               </span>
-              <Button variant="secondary" className="px-3 py-1.5" onClick={logout}>
+              <Button variant="secondary" className="px-3 py-1.5" onClick={() => logout()}>
                 Logout
               </Button>
             </>
@@ -74,34 +71,22 @@ export default function Navbar() {
 
         <button
           className="inline-flex items-center rounded-md p-2 text-neutral-700 hover:bg-neutral-100 md:hidden dark:text-neutral-200 dark:hover:bg-gray-800"
-          aria-label="Toggle menu"
-          aria-controls="mobile-menu"
-          aria-expanded={open}
-          onClick={() => setOpen(v => !v)}
+          aria-label="Open menu"
+          onClick={() => setOpen((o) => !o)}
         >
-          <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2">
-            {open ? (
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-            )}
-          </svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
         </button>
       </Container>
 
       {open && (
-        <div id="mobile-menu" className="border-t bg-white md:hidden dark:border-gray-800 dark:bg-gray-950">
-          <Container className="flex flex-col gap-1 py-2">
+        <div className="border-t bg-white/95 py-2 shadow-md dark:border-gray-800 dark:bg-gray-950/95 md:hidden">
+          <Container className="flex flex-col">
             <NavItem to="/search" onClick={() => setOpen(false)}>Browse</NavItem>
+            <NavItem to="/advanced-search" onClick={() => setOpen(false)}>Advanced Search</NavItem>
 
-            {isAuthed && (
-              <>
-                <NavItem to="/my-listings" onClick={() => setOpen(false)}>My Listings</NavItem>
-                <NavItem to="/create-listing" onClick={() => setOpen(false)}>
-                  <span className="text-brand-700 dark:text-brand-400">Post Listing</span>
-                </NavItem>
-              </>
-            )}
+            {isAuthed && <NavItem to="/my-listings" onClick={() => setOpen(false)}>My Listings</NavItem>}
+            {isAuthed && <NavItem to="/create-listing" onClick={() => setOpen(false)}><span className="text-brand-700 dark:text-brand-400">Post Listing</span></NavItem>}
+            {isAuthed && <NavItem to="/profile" onClick={() => setOpen(false)}>Profile</NavItem>}
 
             {!isAuthed && (
               <>

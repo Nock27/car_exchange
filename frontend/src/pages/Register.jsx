@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import Container from '@/components/layout/Container'
 import Card from '@/components/ui/Card'
 import Input from '@/components/ui/Input'
@@ -8,8 +8,9 @@ import Button from '@/components/ui/Button'
 import { useAuth } from '@/context/AuthContext'
 
 export default function Register() {
-  const { register } = useAuth()
+  const { register, isAuthed } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
@@ -28,6 +29,14 @@ export default function Register() {
     non_field_errors: '',
   })
   const [topError, setTopError] = useState('')
+
+  // If already authenticated, leave this page
+  useEffect(() => {
+    if (isAuthed) {
+      const dest = location.state?.from || '/'
+      navigate(dest, { replace: true })
+    }
+  }, [isAuthed, location.state, navigate])
 
   const setOneTopErrorFromFields = (errsObj) => {
     const order = ['username', 'email', 'password', 'confirm', 'role', 'non_field_errors']
@@ -72,6 +81,7 @@ export default function Register() {
         password,
         role,
       })
+      // AuthContext.register auto-logs in; show home
       navigate('/', { replace: true })
     } catch (err) {
       const data = err?.response?.data

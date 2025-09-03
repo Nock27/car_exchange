@@ -1,60 +1,55 @@
 """
 URL configuration for config project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.2/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from listings.views import BrandViewSet, CarModelViewSet, ListingViewSet
-from locations.views import RegionViewSet, CityViewSet
+from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
-from accounts.views import RegisterView, MeView
+
+from rest_framework.routers import DefaultRouter
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView, TokenRefreshView, TokenVerifyView
+)
+
+# Listings & Locations viewsets
 from listings.views import (
     BrandViewSet, CarModelViewSet, ListingViewSet,
     CategoryViewSet, FuelTypeViewSet, TransmissionTypeViewSet,
     BodyTypeViewSet, DriveTypeViewSet
 )
+from locations.views import RegionViewSet, CityViewSet
 
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,  # /auth/login
-    TokenRefreshView,     # /auth/refresh
-    TokenVerifyView,      # /auth/verify (optional)
-)
+# Accounts views
+from accounts.views import RegisterView, MeView, ProfileView
 
 router = DefaultRouter()
+# listings domain
 router.register(r'brands', BrandViewSet, basename='brand')
 router.register(r'models', CarModelViewSet, basename='model')
 router.register(r'categories', CategoryViewSet, basename='category')
 router.register(r'fueltypes', FuelTypeViewSet, basename='fueltype')
-router.register(r'transmissions', TransmissionTypeViewSet, basename='transmissiontype')
+router.register(r'transmissions', TransmissionTypeViewSet, basename='transmission')
 router.register(r'bodytypes', BodyTypeViewSet, basename='bodytype')
 router.register(r'drivetypes', DriveTypeViewSet, basename='drivetype')
 router.register(r'listings', ListingViewSet, basename='listing')
+
+# locations domain
 router.register(r'regions', RegionViewSet, basename='region')
 router.register(r'cities', CityViewSet, basename='city')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+
+    # API router (catalogs, listings, locations)
     path('api/', include(router.urls)),
+
     # JWT
     path('auth/login', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('auth/refresh', TokenRefreshView.as_view(), name='token_refresh'),
     path('auth/verify', TokenVerifyView.as_view(), name='token_verify'),
 
+    # Accounts
     path('auth/register', RegisterView.as_view(), name='auth_register'),
     path('auth/me', MeView.as_view(), name='auth_me'),
-    
+    path('api/profile/', ProfileView.as_view(), name='api_profile'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

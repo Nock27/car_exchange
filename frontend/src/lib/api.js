@@ -1,24 +1,28 @@
 import axios from 'axios'
 
-// Base URL normalization
+// ---- Base URL normalization ----
 const raw = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(/\/+$/,'')
 const rootBaseURL = raw.endsWith('/api') ? raw.slice(0, -4) : raw
 const apiPrefix = raw.endsWith('/api') ? '' : '/api'
 
+// ---- Axios instance ----
 export const api = axios.create({
   baseURL: rootBaseURL,
-  withCredentials: false,
+  withCredentials: false, // we use Bearer tokens, not cookies
 })
 
-// Endpoints
+// ---- Endpoints ----
 export const endpoints = {
-  // AUTH at root
+  // Auth (root)
   login: '/auth/login',
   refresh: '/auth/refresh',
   me: '/auth/me',
   register: '/auth/register',
 
-  // DATA under /api
+  // Profile (contact defaults)
+  profile: '/api/profile/',
+
+  // Data (under /api)
   brands: `${apiPrefix}/brands/`,
   models: `${apiPrefix}/models/`,
   categories: `${apiPrefix}/categories/`,
@@ -31,80 +35,95 @@ export const endpoints = {
   listings: `${apiPrefix}/listings`,
 }
 
-// ----- helpers -----
+// ---- Helper: normalize DRF list responses to plain arrays ----
 /**
- * Normalizes a DRF list response to a plain array.
- * Accepts: [] or {results: []} or {data: []} (axios wraps .data outside)
+ * Accepts an axios Response or a raw object.
+ * Returns [] | data | data.results | data.data (first array it finds)
  */
-export function toArray(res) {
-  const d = res?.data
+export function toArray(resOrObj) {
+  const d = resOrObj && resOrObj.data !== undefined ? resOrObj.data : resOrObj
   if (Array.isArray(d)) return d
-  if (Array.isArray(d?.results)) return d.results
-  if (Array.isArray(d?.data)) return d.data
+  if (d && Array.isArray(d.results)) return d.results
+  if (d && Array.isArray(d.data)) return d.data
   return []
 }
 
-// Token storage
+// ---- Token storage ----
 const ACCESS_KEY = 'auth_access'
 const REFRESH_KEY = 'auth_refresh'
-export const getAccess = () => localStorage.getItem(ACCESS_KEY)
-export const getRefresh = () => localStorage.getItem(REFRESH_KEY)
-export const setTokens = ({ access, refresh }) => {
+
+export function setTokens({ access, refresh }) {
   if (access) localStorage.setItem(ACCESS_KEY, access); else localStorage.removeItem(ACCESS_KEY)
   if (typeof refresh !== 'undefined') {
     if (refresh) localStorage.setItem(REFRESH_KEY, refresh); else localStorage.removeItem(REFRESH_KEY)
   }
 }
 
-// Attach Authorization header
+export function getAccess() {
+  return localStorage.getItem(ACCESS_KEY)
+}
+
+export function getRefresh() {
+  return localStorage.getItem(REFRESH_KEY)
+}
+
+// ---- Attach Authorization header ----
 api.interceptors.request.use((config) => {
   const token = getAccess()
   if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })
 
-// Auto-refresh on 401
+// ---- Auto-refresh on 401 ----
 let isRefreshing = false
-let pending = []
+let waitQueue = []
+
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
-    const { config: original, response } = error
-    if (response?.status === 401 && !original._retry) {
-      const refresh = getRefresh()
-      if (!refresh) return Promise.reject(error)
-
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          pending.push({ resolve, reject })
-        })
-          .then((token) => {
-            original.headers.Authorization = `Bearer ${token}`
-            return api(original)
-          })
-          .catch(Promise.reject)
-      }
-
-      original._retry = true
-      isRefreshing = true
-      try {
-        const { data } = await api.post(endpoints.refresh, { refresh })
-        const newAccess = data?.access
-        if (!newAccess) throw new Error('No access in refresh response')
-        setTokens({ access: newAccess })
-        pending.forEach(({ resolve }) => resolve(newAccess))
-        pending = []
-        original.headers.Authorization = `Bearer ${newAccess}`
-        return api(original)
-      } catch (e) {
-        pending.forEach(({ reject }) => reject(e))
-        pending = []
-        setTokens({ access: null, refresh: null })
-        return Promise.reject(e)
-      } finally {
-        isRefreshing = false
-      }
+    const { response, config: original } = error
+    if (response?.status !== 401 || original?._retry) {
+      return Promise.reject(error)
     }
-    return Promise.reject(error)
+
+    const refresh = getRefresh()
+    if (!refresh) return Promise.reject(error)
+
+    original._retry = true
+
+    // queue requests while refreshing
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        waitQueue.push({ resolve, reject })
+      })
+        .then((token) => {
+          original.headers.Authorization = `Bearer ${token}`
+          return api(original)
+        })
+        .catch(Promise.reject)
+    }
+
+    isRefreshing = true
+    try {
+      const { data } = await axios.post(`${rootBaseURL}/auth/refresh`, { refresh })
+      const newAccess = data?.access
+      if (!newAccess) throw new Error('No access token in refresh response')
+
+      setTokens({ access: newAccess })
+      // release the queue
+      waitQueue.forEach(({ resolve }) => resolve(newAccess))
+      waitQueue = []
+
+      // retry the original
+      original.headers.Authorization = `Bearer ${newAccess}`
+      return api(original)
+    } catch (e) {
+      waitQueue.forEach(({ reject }) => reject(e))
+      waitQueue = []
+      setTokens({ access: null, refresh: null })
+      return Promise.reject(e)
+    } finally {
+      isRefreshing = false
+    }
   }
 )

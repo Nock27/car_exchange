@@ -1,0 +1,19 @@
+/* --- Leaflet vs. UI stacking fixes --- */
+
+/* Keep Leaflet panes below app popovers/menus/autocomplete */
+.leaflet-pane,
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 100 !important;
+}
+
+/* Our autocomplete dropdown should always float above the map */
+.autocomplete-dropdown {
+  position: absolute;
+  z-index: 9999 !important;
+}
+
+/* Make sure any Card/section around the address field doesn't clip children */
+.card-overflow-visible {
+  overflow: visible !important;
+}
