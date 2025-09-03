@@ -1,101 +1,139 @@
-import { useEffect, useRef, useState } from 'react'
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet'
+import { useEffect, useRef } from 'react'
 import L from 'leaflet'
-import 'leaflet-control-geocoder'
+import 'leaflet/dist/leaflet.css'
 
-/* Fix default marker icons in Leaflet (Vite + Leaflet quirk) */
-delete L.Icon.Default.prototype._getIconUrl
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: new URL('leaflet/dist/images/marker-icon-2x.png', import.meta.url),
-  iconUrl: new URL('leaflet/dist/images/marker-icon.png', import.meta.url),
-  shadowUrl: new URL('leaflet/dist/images/marker-shadow.png', import.meta.url),
-})
+const DEFAULT_CENTER = { lat: 42.7339, lng: 25.4858 }
+const TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+const ATTRIB = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 
-function ClickHandler({ onPick }) {
-  useMapEvents({
-    click(e) {
-      onPick(e.latlng)
-    }
-  })
-  return null
+async function reverseGeocode(lat, lon) {
+  try {
+    const url = new URL('https://nominatim.openstreetmap.org/reverse')
+    url.searchParams.set('format', 'jsonv2')
+    url.searchParams.set('lat', lat)
+    url.searchParams.set('lon', lon)
+    url.searchParams.set('addressdetails', '1')
+    url.searchParams.set('accept-language', 'bg')
+    const res = await fetch(url.toString(), { headers: { 'Accept': 'application/json' } })
+    const data = await res.json()
+    return data?.display_name || `${lat.toFixed(5)}, ${lon.toFixed(5)}`
+  } catch {
+    return `${lat.toFixed(5)}, ${lon.toFixed(5)}`
+  }
 }
 
-export default function MapPicker({ value, onChange }) {
-  // value = { address, latitude, longitude } or undefined
-  const [pos, setPos] = useState(
-    value?.latitude && value?.longitude
-      ? [value.latitude, value.longitude]
-      : [42.6977, 23.3219] // default Sofia
-  )
-  const geocoderRef = useRef(null)
+/**
+ * Props:
+ *  - value: { address, latitude, longitude }
+ *  - center?: { lat, lng }
+ *  - zoom?: number
+ *  - focusOnChangeZoom?: number (default 17)  <-- NEW
+ *  - onChange: ({ address, latitude, longitude }) => void
+ */
+export default function MapPicker({ value, center, zoom, focusOnChangeZoom = 17, onChange }) {
   const mapRef = useRef(null)
-
-  const handlePick = (latlng) => {
-    setPos([latlng.lat, latlng.lng])
-    onChange?.({
-      address: value?.address || '',
-      latitude: latlng.lat,
-      longitude: latlng.lng,
-    })
-  }
+  const markerRef = useRef(null)
+  const containerRef = useRef(null)
 
   useEffect(() => {
-    if (!mapRef.current) return
-    // add Geocoder control (uses Nominatim, no API key)
-    if (!geocoderRef.current) {
-      const map = mapRef.current
-      const geocoder = L.Control.geocoder({
-        defaultMarkGeocode: false,
-      })
-        .on('markgeocode', function(e) {
-          const { center, name } = e.geocode
-          setPos([center.lat, center.lng])
-          onChange?.({ address: name, latitude: center.lat, longitude: center.lng })
-          map.setView([center.lat, center.lng], 14)
+    if (mapRef.current) return
+
+    const initialCenter = (center && isFinite(center.lat) && isFinite(center.lng))
+      ? center
+      : (value?.latitude && value?.longitude
+          ? { lat: Number(value.latitude), lng: Number(value.longitude) }
+          : DEFAULT_CENTER)
+
+    const initialZoom = zoom ?? (center ? 12 : (value?.latitude ? focusOnChangeZoom : 7))
+
+    const map = L.map(containerRef.current, {
+      center: [initialCenter.lat, initialCenter.lng],
+      zoom: initialZoom,
+      zoomControl: true,
+      scrollWheelZoom: false,
+    })
+    mapRef.current = map
+
+    L.tileLayer(TILE_URL, { attribution: ATTRIB }).addTo(map)
+
+    const createOrMoveMarker = (lat, lng) => {
+      if (!markerRef.current) {
+        const marker = L.marker([lat, lng], { draggable: true }).addTo(map)
+        marker.on('dragend', async () => {
+          const pos = marker.getLatLng()
+          const addr = await reverseGeocode(pos.lat, pos.lng)
+          // zoom in when user finishes drag
+          map.setView([pos.lat, pos.lng], focusOnChangeZoom, { animate: true })
+          onChange?.({ address: addr, latitude: pos.lat, longitude: pos.lng })
         })
-        .addTo(map)
-      geocoderRef.current = geocoder
+        markerRef.current = marker
+      } else {
+        markerRef.current.setLatLng([lat, lng])
+      }
     }
-  }, [onChange])
+
+    if (value?.latitude && value?.longitude) {
+      const lat = Number(value.latitude), lng = Number(value.longitude)
+      createOrMoveMarker(lat, lng)
+      map.setView([lat, lng], focusOnChangeZoom, { animate: true })
+    }
+
+    map.on('click', async (e) => {
+      const { lat, lng } = e.latlng
+      createOrMoveMarker(lat, lng)
+      const addr = await reverseGeocode(lat, lng)
+      map.setView([lat, lng], focusOnChangeZoom, { animate: true })
+      onChange?.({ address: addr, latitude: lat, longitude: lng })
+    })
+
+    return () => {
+      map.off()
+      map.remove()
+      mapRef.current = null
+      markerRef.current = null
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // City change (center) – keep previous behavior
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    const hasValidCenter = center && isFinite(center.lat) && isFinite(center.lng)
+    if (hasValidCenter) map.setView([center.lat, center.lng], zoom ?? 12, { animate: true })
+  }, [center, zoom])
+
+  // External value change (e.g. autocomplete picked)
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    const lat = Number(value?.latitude), lng = Number(value?.longitude)
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
+
+    if (!markerRef.current) {
+      markerRef.current = L.marker([lat, lng], { draggable: true }).addTo(map)
+      markerRef.current.on('dragend', async () => {
+        const pos = markerRef.current.getLatLng()
+        const addr = await reverseGeocode(pos.lat, pos.lng)
+        map.setView([pos.lat, pos.lng], focusOnChangeZoom, { animate: true })
+        onChange?.({ address: addr, latitude: pos.lat, longitude: pos.lng })
+      })
+    } else {
+      markerRef.current.setLatLng([lat, lng])
+    }
+
+    map.setView([lat, lng], focusOnChangeZoom, { animate: true })
+  }, [value?.latitude, value?.longitude, focusOnChangeZoom]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="space-y-2">
-      <div className="text-sm text-gray-600">
-        Start typing an address in the geocoder (top-left), or click on the map to set a pin.
-      </div>
-      <MapContainer
-        center={pos}
-        zoom={12}
-        style={{ height: 360, width: '100%' }}
-        whenCreated={(map) => (mapRef.current = map)}
-      >
-        <TileLayer
-          attribution='&copy; OpenStreetMap contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <ClickHandler onPick={handlePick} />
-        {pos && <Marker position={pos} />}
-      </MapContainer>
-
-      <div className="grid grid-cols-3 gap-2 text-sm">
-        <div>
-          <label className="block mb-1">Address</label>
-          <input
-            className="border rounded px-2 py-1 w-full"
-            value={value?.address || ''}
-            onChange={e => onChange?.({ ...value, address: e.target.value })}
-            placeholder="Type or use the geocoder"
-          />
-        </div>
-        <div>
-          <label className="block mb-1">Latitude</label>
-          <input className="border rounded px-2 py-1 w-full" value={value?.latitude || ''} readOnly />
-        </div>
-        <div>
-          <label className="block mb-1">Longitude</label>
-          <input className="border rounded px-2 py-1 w-full" value={value?.longitude || ''} readOnly />
-        </div>
-      </div>
+    <div className="w-full">
+      <div
+        ref={containerRef}
+        className="h-80 w-full rounded-xl border border-neutral-200 shadow-sm overflow-hidden dark:border-gray-700"
+        style={{ minHeight: 320, zIndex: 10 }}
+      />
+      <p className="mt-2 text-xs text-neutral-500">
+        Tip: Click the map to drop a pin, or drag the pin to refine the exact address.
+      </p>
     </div>
   )
 }

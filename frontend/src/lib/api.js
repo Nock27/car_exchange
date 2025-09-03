@@ -1,13 +1,13 @@
 import axios from 'axios'
 
-// Normalize base URL (root)
+// Base URL normalization
 const raw = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(/\/+$/,'')
 const rootBaseURL = raw.endsWith('/api') ? raw.slice(0, -4) : raw
 const apiPrefix = raw.endsWith('/api') ? '' : '/api'
 
 export const api = axios.create({
   baseURL: rootBaseURL,
-  withCredentials: false, // using Bearer tokens, not cookies
+  withCredentials: false,
 })
 
 // Endpoints
@@ -19,11 +19,29 @@ export const endpoints = {
   register: '/auth/register',
 
   // DATA under /api
-  brands: `${apiPrefix}/brands`,
-  models: `${apiPrefix}/models`,
-  regions: `${apiPrefix}/regions`,
-  cities: `${apiPrefix}/cities`,
+  brands: `${apiPrefix}/brands/`,
+  models: `${apiPrefix}/models/`,
+  categories: `${apiPrefix}/categories/`,
+  fueltypes: `${apiPrefix}/fueltypes/`,
+  transmissions: `${apiPrefix}/transmissions/`,
+  bodytypes: `${apiPrefix}/bodytypes/`,
+  drivetypes: `${apiPrefix}/drivetypes/`,
+  regions: `${apiPrefix}/regions/`,
+  cities: `${apiPrefix}/cities/`,
   listings: `${apiPrefix}/listings`,
+}
+
+// ----- helpers -----
+/**
+ * Normalizes a DRF list response to a plain array.
+ * Accepts: [] or {results: []} or {data: []} (axios wraps .data outside)
+ */
+export function toArray(res) {
+  const d = res?.data
+  if (Array.isArray(d)) return d
+  if (Array.isArray(d?.results)) return d.results
+  if (Array.isArray(d?.data)) return d.data
+  return []
 }
 
 // Token storage
@@ -51,8 +69,8 @@ let pending = []
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
-    const original = error.config
-    if (error?.response?.status === 401 && !original._retry) {
+    const { config: original, response } = error
+    if (response?.status === 401 && !original._retry) {
       const refresh = getRefresh()
       if (!refresh) return Promise.reject(error)
 
