@@ -67,7 +67,6 @@ function formatApiErrors(data) {
   return lines.join('\n');
 }
 
-
 export default function CreateListing() {
   const navigate = useNavigate()
   const { isAuthed } = useAuth()
@@ -118,7 +117,56 @@ export default function CreateListing() {
     latitude: '',
     longitude: '',
   })
-  const [images, setImages] = useState([])
+  const [images, setImages] = useState([]); 
+
+  const MAX_PHOTOS = 15;
+
+  // stable signature to dedupe
+  const sig = (f) => `${f.name}|${f.size}|${f.lastModified}`;
+
+  function addFiles(newFiles) {
+    setImages((prev) => {
+      const existing = new Set(prev.map((p) => sig(p.file)));
+      const toAdd = [];
+      for (const f of newFiles) {
+        if (!f.type?.startsWith?.('image/')) continue;
+        const s = sig(f);
+        if (existing.has(s)) continue; // skip duplicate
+        toAdd.push({
+          id: `${s}|${Math.random().toString(36).slice(2)}`,
+          file: f,
+          url: URL.createObjectURL(f),
+        });
+      }
+      return [...prev, ...toAdd].slice(0, MAX_PHOTOS);
+    });
+  }
+
+  function removeImage(id) {
+    setImages((prev) => {
+      const next = prev.filter((p) => p.id !== id);
+      return next;
+    });
+  }
+
+  // (optional) simple up/down reorder
+  function moveImage(id, dir) {
+    setImages((prev) => {
+      const i = prev.findIndex((p) => p.id === id);
+      if (i < 0) return prev;
+      const j = dir === 'up' ? i - 1 : i + 1;
+      if (j < 0 || j >= prev.length) return prev;
+      const copy = [...prev];
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+      return copy;
+    });
+  }
+
+// cleanup blob urls on unmount
+useEffect(() => {
+  return () => { images.forEach((p) => URL.revokeObjectURL(p.url)); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
 
   const [selectedFeatureIds, setSelectedFeatureIds] = useState(new Set())
   const toggleFeature = (id) => {
@@ -313,10 +361,10 @@ export default function CreateListing() {
   }
 
   const onFiles = (e) => {
-    const files = Array.from(e.target.files || [])
-    const imgs = files.filter(f => f.type.startsWith('image/')).slice(0, 15)
-    setImages(imgs)
-  }
+    const list = Array.from(e.target.files || []);
+    addFiles(list);       // append instead of overwrite
+    e.target.value = '';  // let user pick the same files again later
+  };
 
   const canSubmit = useMemo(() => {
     const needed = [
@@ -375,18 +423,18 @@ export default function CreateListing() {
     // 3) Upload images 
     if (images.length) {
       for (let i = 0; i < images.length; i++) {
-        const file = images[i]
-        const formData = new FormData()
-        formData.append('image', file)
-        formData.append('order', String(i)) 
+        const fd = new FormData();
+        fd.append('image', images[i].file);
+        fd.append('order', String(i)); // optional
 
         await api.post(
           `${endpoints.listings}/${created.id}/upload_image/`,
-          formData,
+          fd,
           { headers: { 'Content-Type': 'multipart/form-data' } }
-        )
+        );
       }
-    }
+}
+
 
     navigate(`/my-listings`)
   } catch (err) {
@@ -620,7 +668,9 @@ export default function CreateListing() {
           <h3 className="mb-3 text-lg font-semibold">Photos & Video</h3>
           <div className="space-y-3">
             <div>
-              <label className="mb-1 block text-sm font-medium">Photos (up to 15)</label>
+              <label className="mb-1 block text-sm font-medium">
+                Photos (up to {MAX_PHOTOS})
+              </label>
               <input
                 type="file"
                 accept="image/*"
@@ -628,12 +678,63 @@ export default function CreateListing() {
                 onChange={onFiles}
                 className="block w-full text-sm file:mr-4 file:rounded-md file:border-0 file:bg-brand-600 file:px-3 file:py-2 file:font-medium file:text-white hover:file:bg-brand-700"
               />
-              {images?.length > 0 && (
-                <div className="mt-2 text-sm text-neutral-600 dark:text-neutral-300">
-                  Selected: {images.length} file{images.length > 1 ? 's' : ''}
-                </div>
+
+              {images.length > 0 && (
+                <>
+                  <div className="mt-2 text-sm text-neutral-600 dark:text-neutral-300">
+                    Selected: {images.length} / {MAX_PHOTOS}
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                    {images.map((p, idx) => (
+                      <div
+                        key={p.id}
+                        className="relative overflow-hidden rounded-lg border bg-white/60 p-1 dark:border-gray-700 dark:bg-gray-900/60"
+                      >
+                        <img
+                          src={p.url}
+                          alt={`photo ${idx + 1}`}
+                          className="h-28 w-full rounded-md object-cover"
+                        />
+                        <div className="mt-1 flex items-center justify-between gap-1">
+                          <button
+                            type="button"
+                            onClick={() => removeImage(p.id)}
+                            className="rounded-md border px-2 py-1 text-xs hover:bg-red-50 dark:hover:bg-red-900/30"
+                            title="Remove"
+                          >
+                            Remove
+                          </button>
+
+                          {/* optional reorder buttons; remove if you don't want them */}
+                          <div className="flex gap-1">
+                            <button
+                              type="button"
+                              onClick={() => moveImage(p.id, 'up')}
+                              disabled={idx === 0}
+                              className="rounded-md border px-2 py-1 text-xs disabled:opacity-40"
+                              title="Move up"
+                            >
+                              ↑
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => moveImage(p.id, 'down')}
+                              disabled={idx === images.length - 1}
+                              className="rounded-md border px-2 py-1 text-xs disabled:opacity-40"
+                              title="Move down"
+                            >
+                              ↓
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
+
 
             <div>
               <label className="mb-1 block text-sm font-medium">Video URL (YouTube/Vimeo)</label>
