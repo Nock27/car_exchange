@@ -33,6 +33,7 @@ export const endpoints = {
   regions: `${apiPrefix}/regions/`,
   cities: `${apiPrefix}/cities/`,
   listings: `${apiPrefix}/listings`,
+  features: `${apiPrefix}/features/`,
 }
 
 // ---- Helper: normalize DRF list responses to plain arrays ----

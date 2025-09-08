@@ -1,10 +1,12 @@
-from rest_framework import viewsets, permissions, status, filters
+from rest_framework import viewsets, permissions, status, decorators, response, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Prefetch, Q
 from .permissions import IsSellerOrReadOnly, IsOwnerOrAdmin
 from .filters import ListingFilter
+from .models import FeatureGroup, Feature
+from .serializers import FeatureSerializer
 
 from .models import (
     Brand, CarModel, Category, FuelType, TransmissionType, BodyType, DriveType,
@@ -36,7 +38,6 @@ class ListingViewSet(viewsets.ModelViewSet):
     serializer_class = ListingSerializer
     permission_classes = [IsSellerOrReadOnly, IsOwnerOrAdmin]
 
-    filter_backends = [DjangoFilterBackend]
     filterset_fields = [
         "brand", "model", "city", "fuel_type", "transmission",
         "body_type", "drive_type", "year", "status", "is_active",
@@ -45,6 +46,11 @@ class ListingViewSet(viewsets.ModelViewSet):
     filterset_class = ListingFilter
     ordering_fields = ["created_at", "price", "year", "mileage"]
     ordering = ["-created_at"]  # default
+
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = {
+        "features": ["in"],  
+    }
 
     def perform_create(self, serializer):
         # Assign logged-in user as seller and set initial status to 'pending'
@@ -118,4 +124,9 @@ class BodyTypeViewSet(viewsets.ReadOnlyModelViewSet):
 class DriveTypeViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = DriveType.objects.all().order_by("name")
     serializer_class = DriveTypeSerializer
+    permission_classes = [permissions.AllowAny]
+
+class FeatureViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Feature.objects.select_related("group").order_by("group__name", "name")
+    serializer_class = FeatureSerializer
     permission_classes = [permissions.AllowAny]

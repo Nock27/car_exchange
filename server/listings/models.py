@@ -105,6 +105,10 @@ class Listing(models.Model):
     latitude  = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
 
+    # FEATURES
+    features = models.ManyToManyField("Feature", blank=True, related_name="listings")
+
+
     class Meta:
         indexes = [
             models.Index(fields=["status", "is_active"]),
@@ -139,3 +143,20 @@ class ListingImage(models.Model):
     listing = models.ForeignKey(Listing, on_delete=models.CASCADE, related_name="images")
     image   = models.ImageField(upload_to=listing_image_path)
     order   = models.PositiveSmallIntegerField(default=0)
+
+class FeatureGroup(models.Model):
+    name = models.CharField(max_length=64, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
+class Feature(models.Model):
+    group = models.ForeignKey(FeatureGroup, on_delete=models.CASCADE, related_name="features")
+    name = models.CharField(max_length=64)
+
+    class Meta:
+        unique_together = ("group", "name")
+
+    def __str__(self):
+        return f"{self.group.name} · {self.name}"

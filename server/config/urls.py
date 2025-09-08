@@ -5,6 +5,8 @@ from django.contrib import admin
 from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
+import listings.views as listings_views
+
 
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import (
@@ -36,6 +38,8 @@ router.register(r'listings', ListingViewSet, basename='listing')
 # locations domain
 router.register(r'regions', RegionViewSet, basename='region')
 router.register(r'cities', CityViewSet, basename='city')
+
+router.register(r"features", listings_views.FeatureViewSet, basename="feature")
 
 urlpatterns = [
     path('admin/', admin.site.urls),

@@ -19,42 +19,30 @@ const COLOR_OPTIONS = [
 ]
 const YT_VIMEO_RE = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|vimeo\.com)\/.+/i
 
-// ==== Extras & Features from the spec ====
-const GROUPS = {
-  Safety: [
-    'GPS tracking system','Automatic stability control','Adaptive headlights','Anti-lock braking system',
-    'Airbags - Rear','Airbags - Front','Airbags - Side','Electric brake force distribution',
-    'Electronic stabilization program','Tire pressure monitoring','Parking sensors','ISOFIX system',
-    'Dynamic Stability System','Anti-skid system','Pad drying system','Distance control system',
-    'Descent control system','Brake assist system'
-  ],
-  Comfort: [
-    'Auto Start Stop function','Bluetooth \\ handsfree system','DVD\\TV','Steptronic','Tiptronic',
-    'USB, audio\\video, IN\\AUX outputs','Adaptive air suspension','Keyless ignition','Differential lock',
-    'On-board computer','Fast \\ slow speeds','Light sensor','Electric mirrors','Electric windows',
-    'Electric suspension adjustment','Electric seat adjustment','Electric power steering','Air conditioning',
-    'Climatronic','Multifunction steering wheel','Navigation','Steering wheel heating','Stove',
-    'Windshield heating','Seat heating','Steering wheel adjustment','Rain sensor','Power steering',
-    'Headlight washer system','Cruise control system (autopilot)','Stereo system','Heat pump','Refrigerator compartment'
-  ],
-  Exterior: [
-    '2(3) Doors','4(5) Doors','LED headlights','Xenon headlights','Alloy wheels','Metallic',
-    'Panoramic sunroof','Roof rails','Spoilers','Towbar','Halogen headlights','Shibedah'
-  ],
-  Interior: [
-    'Suede interior','Right-hand drive','Leather salon'
-  ],
-  Protection: [
-    'OFFROAD package','Alarm','Armored','Casco','Winch','Central locking'
-  ],
-  Specialized: [
-    'TAXI','For people with disabilities','Hearse','Ambulance','Educational','Refrigerated','Homologation N1'
-  ],
-  Others: [
-    '4x4','7 seats','Buy back','Barter','Gas system','Long base','Seized\\Sold','Crashed','Short base',
-    'Leasing','Methane system','In parts','Fully serviced','New import','With registration','Service book','Tuning'
-  ],
+// Fetch all pages from a DRF endpoint (works with both paginated + non-paginated)
+async function fetchAll(api, url, params = {}) {
+  const out = [];
+  let nextUrl = url;
+  let nextParams = { page_size: 200, ...params };
+
+  while (nextUrl) {
+    const res = await api.get(nextUrl, { params: nextParams });
+    const data = res?.data;
+    const items = Array.isArray(data) ? data : (data?.results || []);
+    out.push(...items);
+
+    const next = data?.next || null;
+    if (next) {
+      const base = api?.defaults?.baseURL || '';
+      nextUrl = next.startsWith(base) ? next.slice(base.length) : next;
+      nextParams = {};
+    } else {
+      nextUrl = null;
+    }
+  }
+  return out;
 }
+
 
 function onlyDigitsNoLeadingZero(value) {
   if (value === '' || value === null || value === undefined) return true
@@ -78,6 +66,12 @@ export default function CreateListing() {
   const [driveTypes, setDriveTypes] = useState([])
   const [regions, setRegions] = useState([])
   const [cities, setCities] = useState([])
+
+  //Features
+  const [featuresByGroup, setFeaturesByGroup] = useState({});
+  const [featureIdByKey, setFeatureIdByKey] = useState({});
+  const [loadingFeatures, setLoadingFeatures] = useState(true);
+
 
   // form
   const [form, setForm] = useState({
@@ -107,48 +101,73 @@ export default function CreateListing() {
   })
   const [images, setImages] = useState([])
 
-  // extras state: map group -> Set of strings
-  const [extras, setExtras] = useState(() => {
-    const obj = {}
-    Object.keys(GROUPS).forEach(k => { obj[k] = new Set() })
-    return obj
-  })
+  const [selectedFeatureIds, setSelectedFeatureIds] = useState(new Set())
+  const toggleFeature = (id) => {
+    setSelectedFeatureIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   // Load catalogs
   useEffect(() => {
-    let alive = true
+    let alive = true;
     const load = async () => {
       try {
-        setLoading(true)
+        setLoading(true);
         const [
-          catRes, brandRes, fuelRes, transRes, bodyRes, driveRes, regionRes
+          categoriesAll,
+          brandsAll,
+          fuelAll,
+          transAll,
+          bodyAll,
+          driveAll,
+          regionsAll,
         ] = await Promise.all([
-          api.get(endpoints.categories),
-          api.get(endpoints.brands),
-          api.get(endpoints.fueltypes),
-          api.get(endpoints.transmissions),
-          api.get(endpoints.bodytypes),
-          api.get(endpoints.drivetypes),
-          api.get(endpoints.regions),
-        ])
-        if (!alive) return
-        setCategories(toArray(catRes))
-        setBrands(toArray(brandRes))
-        setFuelTypes(toArray(fuelRes))
-        setTransmissions(toArray(transRes))
-        setBodyTypes(toArray(bodyRes))
-        setDriveTypes(toArray(driveRes))
-        setRegions(toArray(regionRes))
+          fetchAll(api, endpoints.categories),
+          fetchAll(api, endpoints.brands),
+          fetchAll(api, endpoints.fueltypes),
+          fetchAll(api, endpoints.transmissions),
+          fetchAll(api, endpoints.bodytypes),
+          fetchAll(api, endpoints.drivetypes),
+          fetchAll(api, endpoints.regions),
+        ]);
+
+        if (!alive) return;
+
+        // Debug prints
+        console.log('Loaded catalogs:', {
+          categories: categoriesAll.length,
+          brands: brandsAll.length,
+          fueltypes: fuelAll.length,
+          transmissions: transAll.length,
+          bodytypes: bodyAll.length,
+          drivetypes: driveAll.length,
+          regions: regionsAll.length,
+        });
+
+        setCategories(categoriesAll);
+        setBrands(brandsAll);
+        setFuelTypes(fuelAll);
+        setTransmissions(transAll);
+        setBodyTypes(bodyAll);
+        setDriveTypes(driveAll);
+        setRegions(regionsAll);
       } catch (e) {
-        console.error(e)
-        setError('Failed to load form catalogs. Check API server.')
+        console.error('Failed to load form catalogs:', e);
+        setError('Failed to load form catalogs. Check API server.');
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    load()
-    return () => { alive = false }
-  }, [])
+    };
+    load();
+    return () => { alive = false; };
+  }, []);
+
+
+
 
   // brand → models
   useEffect(() => {
@@ -179,6 +198,62 @@ export default function CreateListing() {
       .catch(err => console.error(err))
     return () => { alive = false }
   }, [form.region])
+
+  useEffect(() => {
+    let alive = true;
+
+    (async () => {
+      try {
+        setLoadingFeatures(true);
+
+        // Pull ALL features across pages
+        const feats = await fetchAll(api, endpoints.features, { page_size: 200 });
+
+        // Normalize group name from various possible shapes
+        const byGroup = feats.reduce((acc, f) => {
+          const gname =
+            (f.group && typeof f.group === 'object' && (f.group.name || f.group.title || f.group.label)) ||
+            f.group_name ||
+            (typeof f.group === 'string' ? f.group : null) ||
+            'Other';
+          (acc[gname] ||= []).push({ id: f.id, name: f.name });
+          return acc;
+        }, {});
+
+        // Sort items inside each group
+        Object.keys(byGroup).forEach(g =>
+          byGroup[g].sort((a, b) => a.name.localeCompare(b.name))
+        );
+
+        if (alive) {
+          setFeaturesByGroup(byGroup);
+          const idByKey = {};
+          Object.entries(byGroup).forEach(([g, items]) => {
+            items.forEach(({ id, name }) => { idByKey[`${g}|${name}`] = id; });
+          });
+          setFeatureIdByKey(idByKey);
+        }
+
+        console.log(
+          'Features loaded (counts by group):',
+          Object.fromEntries(Object.entries(byGroup).map(([g, arr]) => [g, arr.length]))
+        );
+      } catch (e) {
+        console.error('Failed to load features:', e);
+        if (alive) setFeaturesByGroup({});
+      } finally {
+        if (alive) setLoadingFeatures(false);
+      }
+    })();
+
+    return () => { alive = false; };
+  }, []);
+
+
+
+
+
+  //======
 
   const onChange = (name, value) => setForm(prev => ({ ...prev, [name]: value }))
   const onChangeNumber = (name) => (e) => {
@@ -224,24 +299,6 @@ export default function CreateListing() {
     setImages(imgs)
   }
 
-  const toggleExtra = (group, label) => {
-    setExtras(prev => {
-      const copy = { ...prev }
-      const set = new Set(copy[group])
-      if (set.has(label)) set.delete(label); else set.add(label)
-      copy[group] = set
-      return copy
-    })
-  }
-
-  const flattenExtras = () => {
-    const list = []
-    for (const [group, set] of Object.entries(extras)) {
-      for (const label of set) list.push(`${group}: ${label}`)
-    }
-    return list
-  }
-
   const canSubmit = useMemo(() => {
     const needed = [
       'title','price','year','mileage','category','brand','model',
@@ -253,21 +310,24 @@ export default function CreateListing() {
   }, [form])
 
   const submit = async (e) => {
-    e.preventDefault()
-    setError(null)
-    if (!isAuthed) return setError('You must be logged in to post a listing.')
-    if (!canSubmit) return setError('Please fill in all required fields.')
-    if (form.video_url && !YT_VIMEO_RE.test(form.video_url)) {
-      return setError('Video URL must be a valid YouTube or Vimeo link.')
-    }
+  e.preventDefault()
+  setError(null)
 
-    const extrasList = flattenExtras()
-    const basePayload = {
-      title: form.title,
-      description: form.description,
-      price: Number(form.price),
+  if (!isAuthed) return setError('You must be logged in to post a listing.')
+  if (!canSubmit) return setError('Please fill in all required fields.')
+  if (form.video_url && !YT_VIMEO_RE.test(form.video_url)) {
+    return setError('Video URL must be a valid YouTube or Vimeo link.')
+  }
+
+  try {
+    setSubmitting(true)
+
+    const payload = {
+      title: (form.title || '').trim(),
+      description: (form.description || '').trim(),
+      price: String(form.price ?? ''),
       year: Number(form.year),
-      mileage: Number(form.mileage),
+      mileage: Number(form.mileage ?? 0),
       category: Number(form.category),
       brand: Number(form.brand),
       model: Number(form.model),
@@ -276,66 +336,50 @@ export default function CreateListing() {
       transmission: Number(form.transmission),
       body_type: Number(form.body_type),
       drive_type: Number(form.drive_type),
-      engine_cc: Number(form.engine_cc),
-      power_hp: Number(form.power_hp),
-      color: form.color,
-      euro_standard: form.euro_standard,
+      engine_cc: Number(form.engine_cc ?? 0),
+      power_hp: Number(form.power_hp ?? 0),
+      color: form.color || '',
+      euro_standard: form.euro_standard || '',
       vin: form.vin || null,
       video_url: form.video_url || '',
-      address: form.address,
-      latitude: form.latitude === '' ? null : Number(Number(form.latitude).toFixed(6)),
-      longitude: form.longitude === '' ? null : Number(Number(form.longitude).toFixed(6)),
-    }
+      address: form.address || '',
+      latitude: form.latitude != null ? Number(form.latitude).toFixed(6) : null,
+      longitude: form.longitude != null ? Number(form.longitude).toFixed(6) : null,
+      features: Array.from(selectedFeatureIds ?? []),
+}
 
-    // Try with `extras` if backend supports it; else fall back by appending to description
-    const tryPayloads = []
-    tryPayloads.push({ ...basePayload, extras: extrasList }) // optimistic
-    if (extrasList.length) {
-      const appended = `${basePayload.description || ''}\n\nExtras:\n- ${extrasList.join('\n- ')}`
-      tryPayloads.push({ ...basePayload, description: appended }) // fallback (no extras field)
-    } else {
-      tryPayloads.push(basePayload)
-    }
 
-    try {
-      setSubmitting(true)
-      let created = null
-      let lastErr = null
-      for (const payload of tryPayloads) {
-        try {
-          const { data } = await api.post(`${endpoints.listings}/`, payload)
-          created = data
-          break
-        } catch (er) {
-          lastErr = er
-          // // if 400 and mentions unknown field 'extras', we try next payload
-          // const msg = er?.response?.data
-          // const raw = typeof msg === 'string' ? msg : JSON.stringify(msg || {})
-          // if (!raw.includes('extras') && tryPayloads.length === 1) throw er
-        }
+
+    // 2) Create the listing with ONE request (remove tryPayloads entirely)
+    const { data: created } = await api.post(`${endpoints.listings}/`, payload)
+
+    // 3) Upload images 
+    if (images.length) {
+      for (let i = 0; i < images.length; i++) {
+        const file = images[i]
+        const formData = new FormData()
+        formData.append('image', file)
+        formData.append('order', String(i)) 
+
+        await api.post(
+          `${endpoints.listings}/${created.id}/upload_image/`,
+          formData,
+          { headers: { 'Content-Type': 'multipart/form-data' } }
+        )
       }
-      if (!created) throw lastErr || new Error('Failed to create listing.')
-
-      // images
-      if (images.length) {
-        for (const file of images) {
-          const formData = new FormData()
-          formData.append('image', file)
-          await api.post(`${endpoints.listings}/${created.id}/upload_image/`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-          })
-        }
-      }
-      navigate(`/my-listings`)
-    } catch (err) {
-      console.error(err)
-      const d = err?.response?.data
-      const msg = typeof d === 'string' ? d : (d?.detail || JSON.stringify(d || {}))
-      setError(msg)
-    } finally {
-      setSubmitting(false)
     }
+
+    navigate(`/my-listings`)
+  } catch (err) {
+    console.error(err)
+    const d = err?.response?.data
+    const msg = typeof d === 'string' ? d : (d?.detail || JSON.stringify(d || {}))
+    setError(msg)
+  } finally {
+    setSubmitting(false)
   }
+}
+
 
   const categoriesArr = Array.isArray(categories) ? categories : []
   const brandsArr = Array.isArray(brands) ? brands : []
@@ -523,20 +567,26 @@ export default function CreateListing() {
         <Card className="p-4">
           <h3 className="mb-3 text-lg font-semibold">Extras & Features</h3>
           <div className="space-y-6">
-            {Object.entries(GROUPS).map(([group, options]) => (
+            {loadingFeatures && (
+              <div className="text-sm text-muted-foreground">Loading features…</div>
+            )}
+            {!loadingFeatures && Object.keys(featuresByGroup).length === 0 && (
+              <div className="text-sm text-muted-foreground">No features available.</div>
+            )}
+            {Object.entries(featuresByGroup).map(([group, items]) => (
               <div key={group}>
                 <div className="mb-2 text-sm font-semibold">{group}</div>
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {options.map(opt => {
-                    const checked = extras[group]?.has(opt)
+                  {items.map(item => {
+                    const checked = selectedFeatureIds.has(item.id)
                     return (
-                      <label key={opt} className="inline-flex items-center gap-2">
+                      <label key={item.id} className="inline-flex items-center gap-2">
                         <input
                           type="checkbox"
-                          checked={!!checked}
-                          onChange={() => toggleExtra(group, opt)}
+                          checked={checked}
+                          onChange={() => toggleFeature(item.id)}
                         />
-                        <span className="text-sm">{opt}</span>
+                        <span className="text-sm">{item.name}</span>
                       </label>
                     )
                   })}
@@ -545,6 +595,8 @@ export default function CreateListing() {
             ))}
           </div>
         </Card>
+
+
 
         <Card className="p-4">
           <h3 className="mb-3 text-lg font-semibold">Photos & Video</h3>

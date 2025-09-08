@@ -4,7 +4,7 @@ import re
 
 from .models import (
     Brand, CarModel, Listing, ListingImage,
-    Category, FuelType, TransmissionType, BodyType, DriveType
+    Category, FuelType, TransmissionType, BodyType, DriveType, Feature
 )
 
 # 17 chars, excludes I, O, Q
@@ -61,13 +61,23 @@ class ListingImageSerializer(serializers.ModelSerializer):
         fields = ["id", "image", "order"]
 
 
+class FeatureSerializer(serializers.ModelSerializer):
+    group = serializers.CharField(source="group.name", read_only=True)
+
+    class Meta:
+        model = Feature
+        fields = ["id", "group", "name"]
+
 # --------- Listing (core) ---------
 class ListingSerializer(serializers.ModelSerializer):
     images = ListingImageSerializer(many=True, read_only=True)
+    features = serializers.PrimaryKeyRelatedField(queryset=Feature.objects.all(), many=True, required=False)
 
     # Read-only contact surfaced from the seller's profile
     seller_contact_email = serializers.SerializerMethodField(read_only=True)
     seller_contact_phone = serializers.SerializerMethodField(read_only=True)
+    features_detail = FeatureSerializer(source="features", many=True, read_only=True)
+
 
     class Meta:
         model = Listing
@@ -75,14 +85,16 @@ class ListingSerializer(serializers.ModelSerializer):
             "id", "title", "description", "price", "year", "mileage",
             "category", "brand", "model", "city",
             "fuel_type", "transmission", "body_type", "drive_type",
-            "engine_cc", "power_hp", "color", "euro_standard", "vin",
-            "video_url",
+            "engine_cc", "power_hp", "color", "euro_standard",
+            "vin", "video_url",
             "address", "latitude", "longitude",
-            "status", "is_active", "created_at", "updated_at", "expires_at",
+            "status", "is_active",
+            "created_at", "updated_at", "expires_at",
+            "features", "features_detail",
             "images",
-            # Read-only contact
             "seller_contact_email", "seller_contact_phone",
         ]
+
         read_only_fields = [
             "created_at", "updated_at", "expires_at",
             "seller_contact_email", "seller_contact_phone",
@@ -156,6 +168,21 @@ class ListingSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({"latitude": "Please pick a real map location."})
 
         return attrs
+    
+    def create(self, validated_data):
+        feats = validated_data.pop("features", [])
+        listing = super().create(validated_data)
+        if feats:
+            listing.features.set(feats)
+        return listing
+
+    def update(self, instance, validated_data):
+        feats = validated_data.pop("features", None)
+        listing = super().update(instance, validated_data)
+        if feats is not None:
+            listing.features.set(feats)
+        return listing
+
 
     # ----- Contact surface -----
     def get_seller_contact_email(self, obj: Listing):
@@ -166,3 +193,5 @@ class ListingSerializer(serializers.ModelSerializer):
         user = getattr(obj, "seller", None)
         profile = getattr(user, "profile", None) if user else None
         return getattr(profile, "phone_e164", "") if profile else ""
+
+

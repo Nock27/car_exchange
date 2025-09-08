@@ -2,7 +2,7 @@ from django.contrib import admin, messages
 from .models import (
     Category, Brand, CarModel,
     FuelType, TransmissionType, BodyType, DriveType,
-    Listing, ListingImage
+    Listing, ListingImage, FeatureGroup, Feature
 )
 
 @admin.register(Brand)
@@ -44,6 +44,7 @@ class ListingAdmin(admin.ModelAdmin):
     search_fields = ("title", "description", "vin")
     ordering = ("-id",)
     actions = ["approve_listings", "reject_listings", "mark_expired"]
+    filter_horizontal = ("features",)  # adds a nice dual-list selector
 
     # Make status / is_active editable directly in the changelist (optional)
     list_editable = ("status", "is_active")
@@ -64,7 +65,17 @@ class ListingAdmin(admin.ModelAdmin):
     mark_expired.short_description = "Mark selected as expired"
 
 
-
 @admin.register(ListingImage)
 class ListingImageAdmin(admin.ModelAdmin):
     list_display = ("id","listing","order")
+
+@admin.register(FeatureGroup)
+class FeatureGroupAdmin(admin.ModelAdmin):
+    list_display = ("id", "name")
+    search_fields = ("name",)
+
+@admin.register(Feature)
+class FeatureAdmin(admin.ModelAdmin):
+    list_display = ("id", "group", "name")
+    list_filter = ("group",)
+    search_fields = ("name",)
