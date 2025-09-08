@@ -1,4 +1,4 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from .models import (
     Category, Brand, CarModel,
     FuelType, TransmissionType, BodyType, DriveType,
@@ -39,37 +39,30 @@ class ListingImageInline(admin.TabularInline):
 
 @admin.register(Listing)
 class ListingAdmin(admin.ModelAdmin):
-    list_display = ("id","title","brand","model","city","price","year","status","is_active","created_at","expires_at")
-    list_filter = ("status","is_active","brand","city","fuel_type","transmission","body_type","drive_type","year")
-    search_fields = ("title","description","vin")
-    autocomplete_fields = ("brand","model","city","seller")
-    inlines = [ListingImageInline]
-    date_hierarchy = "created_at"
-    actions = ["approve_listings", "reject_listings"]
+    list_display = ("id", "title", "brand", "model", "price", "status", "is_active", "created_at")
+    list_filter = ("status", "is_active", "brand", "model", "city", "fuel_type", "transmission")
+    search_fields = ("title", "description", "vin")
+    ordering = ("-id",)
+    actions = ["approve_listings", "reject_listings", "mark_expired"]
+
+    # Make status / is_active editable directly in the changelist (optional)
+    list_editable = ("status", "is_active")
 
     def approve_listings(self, request, queryset):
-        updated = 0
-        for listing in queryset:
-            listing.approve()
-            updated += 1
-        self.message_user(request, f"Approved {updated} listing(s).")
+        updated = queryset.update(status="approved", is_active=True)
+        self.message_user(request, f"Approved {updated} listing(s).", level=messages.SUCCESS)
     approve_listings.short_description = "Approve selected listings"
 
     def reject_listings(self, request, queryset):
-        updated = 0
-        for listing in queryset:
-            listing.reject()
-            updated += 1
-        self.message_user(request, f"Rejected {updated} listing(s).")
+        updated = queryset.update(status="rejected", is_active=False)
+        self.message_user(request, f"Rejected {updated} listing(s).", level=messages.WARNING)
     reject_listings.short_description = "Reject selected listings"
 
-    def save_model(self, request, obj, form, change):
-        # keep is_active consistent when saving via the admin form
-        if obj.status == obj.Status.APPROVED:
-            obj.is_active = True
-        else:
-            obj.is_active = False
-        super().save_model(request, obj, form, change)
+    def mark_expired(self, request, queryset):
+        updated = queryset.update(status="expired", is_active=False)
+        self.message_user(request, f"Marked {updated} listing(s) as expired.", level=messages.INFO)
+    mark_expired.short_description = "Mark selected as expired"
+
 
 
 @admin.register(ListingImage)
