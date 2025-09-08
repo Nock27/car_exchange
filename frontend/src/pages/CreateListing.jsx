@@ -283,8 +283,8 @@ export default function CreateListing() {
       vin: form.vin || null,
       video_url: form.video_url || '',
       address: form.address,
-      latitude: Number(form.latitude),
-      longitude: Number(form.longitude),
+      latitude: form.latitude === '' ? null : Number(Number(form.latitude).toFixed(6)),
+      longitude: form.longitude === '' ? null : Number(Number(form.longitude).toFixed(6)),
     }
 
     // Try with `extras` if backend supports it; else fall back by appending to description
@@ -308,10 +308,10 @@ export default function CreateListing() {
           break
         } catch (er) {
           lastErr = er
-          // if 400 and mentions unknown field 'extras', we try next payload
-          const msg = er?.response?.data
-          const raw = typeof msg === 'string' ? msg : JSON.stringify(msg || {})
-          if (!raw.includes('extras') && tryPayloads.length === 1) throw er
+          // // if 400 and mentions unknown field 'extras', we try next payload
+          // const msg = er?.response?.data
+          // const raw = typeof msg === 'string' ? msg : JSON.stringify(msg || {})
+          // if (!raw.includes('extras') && tryPayloads.length === 1) throw er
         }
       }
       if (!created) throw lastErr || new Error('Failed to create listing.')
@@ -329,7 +329,8 @@ export default function CreateListing() {
       navigate(`/my-listings`)
     } catch (err) {
       console.error(err)
-      const msg = err?.response?.data?.detail || 'Failed to create listing. Please check your inputs.'
+      const d = err?.response?.data
+      const msg = typeof d === 'string' ? d : (d?.detail || JSON.stringify(d || {}))
       setError(msg)
     } finally {
       setSubmitting(false)

@@ -18,31 +18,24 @@ function getCenter(obj) {
   return null
 }
 
-async function searchPhoton(q, center) {
-  const url = new URL('https://photon.komoot.io/api/')
-  url.searchParams.set('q', q)
-  url.searchParams.set('limit', '8')
-  url.searchParams.set('lang', 'bg')
-  if (center) {
-    url.searchParams.set('lat', String(center.lat))
-    url.searchParams.set('lon', String(center.lng))
+async function searchPhoton(q, lat, lon) {
+  const query = (q || '').trim()
+  if (query.length < 3) return []
+
+  // Skip Photon for non-ASCII (e.g., Cyrillic) to avoid 400s
+  if (/[^\u0000-\u007F]/.test(query)) return []
+
+  const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=8&lang=bg`
+  try {
+    const res = await fetch(url)
+    if (!res.ok) return []
+    const data = await res.json()
+    return Array.isArray(data?.features) ? data.features : []
+  } catch {
+    return []
   }
-  const res = await fetch(url.toString(), { headers: { Accept: 'application/json' } })
-  if (!res.ok) throw new Error(`Photon ${res.status}`)
-  const data = await res.json()
-  if (!data || !Array.isArray(data.features)) return []
-  return data.features.map(f => {
-    const c = f.geometry?.coordinates || []
-    const p = f.properties || {}
-    const lon = Number(c[0]); const lat = Number(c[1])
-    const parts = [p.name, p.street, p.housenumber, p.city || p.locality, p.postcode, p.state, p.country].filter(Boolean)
-    return {
-      id: `${p.osm_id || f.id || `${lat},${lon}`}`,
-      label: parts.join(', ') || p.name || `${lat.toFixed(5)}, ${lon.toFixed(5)}`,
-      lat, lon
-    }
-  })
 }
+
 
 async function searchNominatim(q, cityObj, regionObj, center) {
   const base = 'https://nominatim.openstreetmap.org/search'

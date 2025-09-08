@@ -86,6 +86,7 @@ class ListingSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "created_at", "updated_at", "expires_at",
             "seller_contact_email", "seller_contact_phone",
+            "status", "is_active",
         ]
 
     # ----- Field-level validation -----
@@ -144,8 +145,15 @@ class ListingSerializer(serializers.ModelSerializer):
         addr = attrs.get("address")
         lat = attrs.get("latitude", None)
         lng = attrs.get("longitude", None)
-        if addr and (lat is None or lng is None):
-            raise serializers.ValidationError({"latitude": "Provide latitude and longitude when address is set."})
+        if lat is not None and lng is not None:
+            try:
+                lat_f, lng_f = float(lat), float(lng)
+            except (TypeError, ValueError):
+                raise serializers.ValidationError({"latitude": "Invalid coordinates."})
+            if not (-90 <= lat_f <= 90 and -180 <= lng_f <= 180):
+                raise serializers.ValidationError({"latitude": "Coordinates out of range."})
+            if lat_f == 0 and lng_f == 0:
+                raise serializers.ValidationError({"latitude": "Please pick a real map location."})
 
         return attrs
 
