@@ -49,6 +49,25 @@ function onlyDigitsNoLeadingZero(value) {
   return /^[1-9]\d*$/.test(String(value))
 }
 
+function formatApiErrors(data) {
+  if (!data || typeof data === 'string') return data;
+  if (data.detail) return data.detail;
+
+  // Flatten { field: ["msg1", "msg2"], non_field_errors: [...] }
+  const lines = [];
+  for (const [field, messages] of Object.entries(data)) {
+    if (Array.isArray(messages)) {
+      messages.forEach(msg => {
+        lines.push(`${field === 'non_field_errors' ? '' : `${field}: `}${msg}`);
+      });
+    } else if (typeof messages === 'string') {
+      lines.push(`${field}: ${messages}`);
+    }
+  }
+  return lines.join('\n');
+}
+
+
 export default function CreateListing() {
   const navigate = useNavigate()
   const { isAuthed } = useAuth()
@@ -372,9 +391,8 @@ export default function CreateListing() {
     navigate(`/my-listings`)
   } catch (err) {
     console.error(err)
-    const d = err?.response?.data
-    const msg = typeof d === 'string' ? d : (d?.detail || JSON.stringify(d || {}))
-    setError(msg)
+    const d = err?.response?.data;
+    setError(formatApiErrors(d) || 'Something went wrong');
   } finally {
     setSubmitting(false)
   }
