@@ -243,12 +243,20 @@ useEffect(() => {
       setForm(prev => ({ ...prev, model: '' }))
       return
     }
+
     let alive = true
-    api.get(endpoints.models, { params: { brand: brandId } })
-      .then(res => { if (alive) setModels(toArray(res)) })
-      .catch(err => console.error(err))
+    ;(async () => {
+      try {
+        const modelsAll = await fetchAll(api, endpoints.models, { brand: brandId })
+        if (alive) setModels(modelsAll)
+      } catch (err) {
+        console.error(err)
+      }
+    })()
+
     return () => { alive = false }
   }, [form.brand])
+
 
   // region → cities
   useEffect(() => {
@@ -258,12 +266,20 @@ useEffect(() => {
       setForm(prev => ({ ...prev, city: '' }))
       return
     }
+
     let alive = true
-    api.get(endpoints.cities, { params: { region: regionId } })
-      .then(res => { if (alive) setCities(toArray(res)) })
-      .catch(err => console.error(err))
-    return () => { alive = false }
-  }, [form.region])
+    ;(async () => {
+      try {
+        const citiesAll = await fetchAll(api, endpoints.cities, { region: regionId })
+        if (alive) setCities(citiesAll)
+      } catch (err) {
+        console.error(err)
+      }
+    })()
+
+  return () => { alive = false }
+}, [form.region])
+
 
   useEffect(() => {
     let alive = true;

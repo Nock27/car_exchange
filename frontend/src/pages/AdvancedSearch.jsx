@@ -86,10 +86,10 @@ export default function AdvancedSearch() {
   ]
 
 
-  // Load all catalogs
+// Load all catalogs
   useEffect(() => {
     let alive = true
-    const load = async () => {
+    ;(async () => {
       try {
         const [
           brandsAll,
@@ -100,13 +100,13 @@ export default function AdvancedSearch() {
           colorsAll,
           regionsAll,
         ] = await Promise.all([
-          api.get(endpoints.brands).then(toArray),
-          api.get(endpoints.fueltypes).then(toArray),
-          api.get(endpoints.transmissions).then(toArray),
-          api.get(endpoints.bodytypes).then(toArray),
-          api.get(endpoints.drivetypes).then(toArray),
-          api.get(endpoints.colors).then(toArray),
-          api.get(endpoints.regions).then(toArray),
+          fetchAllPages(endpoints.brands, { page_size: 500 }),
+          fetchAllPages(endpoints.fueltypes, { page_size: 200 }),
+          fetchAllPages(endpoints.transmissions, { page_size: 200 }),
+          fetchAllPages(endpoints.bodytypes, { page_size: 200 }),
+          fetchAllPages(endpoints.drivetypes, { page_size: 200 }),
+          fetchAllPages(endpoints.colors, { page_size: 500 }),
+          fetchAllPages(endpoints.regions, { page_size: 200 }),
         ])
 
         if (!alive) return
@@ -120,38 +120,56 @@ export default function AdvancedSearch() {
       } catch (err) {
         console.error('Failed to load catalogs:', err)
       }
-    }
-    load()
+    })()
     return () => { alive = false }
   }, [])
 
-  // brand-model dependency
+
+// brand-model dependency
   useEffect(() => {
-  if (!form.brand) {
-    setModels([])
-    handle('model', '')
-    return
-  }
-  let alive = true
-  api.get(endpoints.models, { params: { brand: form.brand } })
-    .then(res => { if (alive) setModels(toArray(res)) })
-    .catch(err => console.error(err))
-  return () => { alive = false }
+    const brandId = form.brand
+    if (!brandId) {
+      setModels([])
+      handle('model', '')
+      return
+    }
+
+    let alive = true
+    ;(async () => {
+      try {
+        const modelsAll = await fetchAllPages(endpoints.models, { brand: brandId, page_size: 500 })
+        if (alive) setModels(modelsAll)
+      } catch (err) {
+        console.error(err)
+      }
+    })()
+
+    return () => { alive = false }
   }, [form.brand])
 
-  // Cities - regions dependency
+
+// Cities - regions dependency
   useEffect(() => {
-  if (!form.region) {
-    setCities([])
-    handle('city', '')
-    return
-  }
-  let alive = true
-  api.get(endpoints.cities, { params: { region: form.region } })
-    .then(res => { if (alive) setCities(toArray(res)) })
-    .catch(err => console.error(err))
-  return () => { alive = false }
+    const regionId = form.region
+    if (!regionId) {
+      setCities([])
+      handle('city', '')
+      return
+    }
+
+    let alive = true
+    ;(async () => {
+      try {
+        const citiesAll = await fetchAllPages(endpoints.cities, { region: regionId, page_size: 500 })
+        if (alive) setCities(citiesAll)
+      } catch (err) {
+        console.error(err)
+      }
+    })()
+
+    return () => { alive = false }
   }, [form.region])
+
 
 
 
