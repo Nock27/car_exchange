@@ -32,6 +32,7 @@ export const endpoints = {
   drivetypes: `${apiPrefix}/drivetypes/`,
   regions: `${apiPrefix}/regions/`,
   cities: `${apiPrefix}/cities/`,
+  colors: `${apiPrefix}/colors/`,
   listings: `${apiPrefix}/listings`,
   features: `${apiPrefix}/features/`,
 }

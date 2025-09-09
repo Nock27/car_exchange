@@ -4,7 +4,7 @@ import re
 
 from .models import (
     Brand, CarModel, Listing, ListingImage,
-    Category, FuelType, TransmissionType, BodyType, DriveType, Feature
+    Category, FuelType, TransmissionType, BodyType, DriveType, Feature, Color
 )
 
 # 17 chars, excludes I, O, Q
@@ -47,6 +47,10 @@ class BodyTypeSerializer(serializers.ModelSerializer):
         model = BodyType
         fields = ["id", "name"]
 
+class ColorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Color
+        fields = ["id", "name"]
 
 class DriveTypeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -72,7 +76,10 @@ class FeatureSerializer(serializers.ModelSerializer):
 class ListingSerializer(serializers.ModelSerializer):
     images = ListingImageSerializer(many=True, read_only=True)
     features = serializers.PrimaryKeyRelatedField(queryset=Feature.objects.all(), many=True, required=False)
-
+    
+    color = serializers.PrimaryKeyRelatedField(queryset=Color.objects.all(), allow_null=True, required=False)
+    color_detail = ColorSerializer(source="color", read_only=True)
+    
     # Read-only contact surfaced from the seller's profile
     seller_contact_email = serializers.SerializerMethodField(read_only=True)
     seller_contact_phone = serializers.SerializerMethodField(read_only=True)
@@ -85,7 +92,9 @@ class ListingSerializer(serializers.ModelSerializer):
             "id", "title", "description", "price", "year", "mileage",
             "category", "brand", "model", "city",
             "fuel_type", "transmission", "body_type", "drive_type",
-            "engine_cc", "power_hp", "color", "euro_standard",
+            "engine_cc", "power_hp",
+            "color","color_detail",
+            "euro_standard",
             "vin", "video_url",
             "address", "latitude", "longitude",
             "status", "is_active",

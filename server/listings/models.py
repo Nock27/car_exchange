@@ -44,6 +44,10 @@ class DriveType(models.Model):
     name = models.CharField(max_length=40, unique=True)  # FWD, RWD, AWD/4x4...
     def __str__(self): return self.name
 
+class Color(models.Model):
+    name = models.CharField(max_length=40, unique=True)
+    def __str__(self): return self.name
+
 def listing_image_path(instance, filename):
     return f"listings/{instance.listing_id}/{filename}"
 
@@ -82,7 +86,7 @@ class Listing(models.Model):
     drive_type     = models.ForeignKey(DriveType, on_delete=models.PROTECT, null=True, blank=True)
     engine_cc      = models.PositiveIntegerField(null=True, blank=True)  # engine displacement in cc
     power_hp       = models.PositiveIntegerField(null=True, blank=True)  # horsepower
-    color          = models.CharField(max_length=40, blank=True)
+    color          = models.ForeignKey(Color, on_delete=models.PROTECT, null=True, blank=True)
 
     # Compliance
     euro_standard  = models.CharField(max_length=10, blank=True)  # e.g. "Euro 6d"

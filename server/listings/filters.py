@@ -14,6 +14,7 @@ class ListingFilter(df.FilterSet):
         fields = [
             "category","brand","model","city",
             "fuel_type","transmission","body_type","drive_type",
+            "color",
             "status","is_active",
         ]
 

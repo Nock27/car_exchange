@@ -33,6 +33,7 @@ router.register(r'fueltypes', FuelTypeViewSet, basename='fueltype')
 router.register(r'transmissions', TransmissionTypeViewSet, basename='transmission')
 router.register(r'bodytypes', BodyTypeViewSet, basename='bodytype')
 router.register(r'drivetypes', DriveTypeViewSet, basename='drivetype')
+router.register(r"colors", listings_views.ColorViewSet, basename="color")
 router.register(r'listings', ListingViewSet, basename='listing')
 
 # locations domain

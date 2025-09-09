@@ -2,7 +2,7 @@ from django.contrib import admin, messages
 from .models import (
     Category, Brand, CarModel,
     FuelType, TransmissionType, BodyType, DriveType,
-    Listing, ListingImage, FeatureGroup, Feature
+    Listing, ListingImage, FeatureGroup, Feature, Color
 )
 
 @admin.register(Brand)
@@ -31,6 +31,10 @@ class BodyTypeAdmin(admin.ModelAdmin):
 
 @admin.register(DriveType)
 class DriveTypeAdmin(admin.ModelAdmin):
+    search_fields = ("name",)
+
+@admin.register(Color)
+class ColorAdmin(admin.ModelAdmin):
     search_fields = ("name",)
 
 class ListingImageInline(admin.TabularInline):

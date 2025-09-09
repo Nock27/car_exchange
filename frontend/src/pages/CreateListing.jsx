@@ -11,12 +11,6 @@ import AddressAutocomplete from '@/components/AddressAutocomplete'
 import { useAuth } from '@/context/AuthContext'
 
 const EURO_OPTIONS = ['Euro 1','Euro 2','Euro 3','Euro 4','Euro 5','Euro 6']
-const COLOR_OPTIONS = [
-  'Dark blue','Banana','Beata','Beige','Bordeaux','Bronze','White','Wine','Violet','Vishnev','Graphite',
-  'Yellow','Green','Golden','Brown','Tiled','Creamy','Purple','Metallic','Orange','Ochre','Ashy','Pearl',
-  'Sandy','Residual','Pink','Sahara','Light grey','Light blue','grey','blue','ivory','silver','Dark grey',
-  'Dark blue meth','Dark red','Tabacco','Chameleon','Red','Black'
-]
 const YT_VIMEO_RE = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|vimeo\.com)\/.+/i
 
 // Fetch all pages from a DRF endpoint (works with both paginated + non-paginated)
@@ -84,6 +78,7 @@ export default function CreateListing() {
   const [driveTypes, setDriveTypes] = useState([])
   const [regions, setRegions] = useState([])
   const [cities, setCities] = useState([])
+  const [colors, setColors] = useState([]);
 
   //Features
   const [featuresByGroup, setFeaturesByGroup] = useState({});
@@ -191,6 +186,7 @@ useEffect(() => {
           transAll,
           bodyAll,
           driveAll,
+          colorsAll,
           regionsAll,
         ] = await Promise.all([
           fetchAll(api, endpoints.categories),
@@ -199,6 +195,7 @@ useEffect(() => {
           fetchAll(api, endpoints.transmissions),
           fetchAll(api, endpoints.bodytypes),
           fetchAll(api, endpoints.drivetypes),
+          fetchAll(api, endpoints.colors),
           fetchAll(api, endpoints.regions),
         ]);
 
@@ -213,6 +210,7 @@ useEffect(() => {
           bodytypes: bodyAll.length,
           drivetypes: driveAll.length,
           regions: regionsAll.length,
+          colors: colorsAll.length,
         });
 
         setCategories(categoriesAll);
@@ -221,6 +219,7 @@ useEffect(() => {
         setTransmissions(transAll);
         setBodyTypes(bodyAll);
         setDriveTypes(driveAll);
+        setColors(colorsAll);
         setRegions(regionsAll);
       } catch (e) {
         console.error('Failed to load form catalogs:', e);
@@ -405,7 +404,7 @@ useEffect(() => {
       drive_type: Number(form.drive_type),
       engine_cc: Number(form.engine_cc ?? 0),
       power_hp: Number(form.power_hp ?? 0),
-      color: form.color || '',
+      color: form.color ? Number(form.color) : null,
       euro_standard: form.euro_standard || '',
       vin: form.vin || null,
       video_url: form.video_url || '',
@@ -575,9 +574,11 @@ useEffect(() => {
 
             <div>
               <label className="mb-1 block text-sm font-medium">Color *</label>
-              <Select value={form.color} onChange={onSelect('color')}>
+              <Select value={form.color} onChange={onSelect('color')} disabled={!colors.length}>
                 <option value="">Select</option>
-                {COLOR_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                {colors.map(c => (
+                  <option key={c.id} value={String(c.id)}>{c.name}</option>
+                ))}
               </Select>
             </div>
 

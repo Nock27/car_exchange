@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect  } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { api, endpoints, toArray } from '@/lib/api'
 import Container from '@/components/layout/Container'
 import SectionHeader from '@/components/ui/SectionHeader'
 import Card from '@/components/ui/Card'
@@ -16,6 +17,16 @@ import Button from '@/components/ui/Button'
 
 export default function AdvancedSearch() {
   const navigate = useNavigate()
+
+  const [brands, setBrands] = useState([])
+  const [models, setModels] = useState([])
+  const [fuelTypes, setFuelTypes] = useState([])
+  const [gearboxes, setGearboxes] = useState([])
+  const [bodyTypes, setBodyTypes] = useState([])
+  const [driveTypes, setDriveTypes] = useState([])
+  const [regions, setRegions] = useState([])
+  const [cities, setCities] = useState([])
+  const [colors, setColors] = useState([]);
 
   const [form, setForm] = useState({
     // Basics
@@ -46,6 +57,7 @@ export default function AdvancedSearch() {
     gearbox: '',
     euro: '',
     categoryBody: '',
+    color: '',
 
     // Location
     region: '',
@@ -72,6 +84,78 @@ export default function AdvancedSearch() {
   const months = [
     'January','February','March','April','May','June','July','August','September','October','November','December'
   ]
+
+
+  // Load all catalogs
+  useEffect(() => {
+    let alive = true
+    const load = async () => {
+      try {
+        const [
+          brandsAll,
+          fuelAll,
+          gearboxAll,
+          bodyAll,
+          driveAll,
+          colorsAll,
+          regionsAll,
+        ] = await Promise.all([
+          api.get(endpoints.brands).then(toArray),
+          api.get(endpoints.fueltypes).then(toArray),
+          api.get(endpoints.transmissions).then(toArray),
+          api.get(endpoints.bodytypes).then(toArray),
+          api.get(endpoints.drivetypes).then(toArray),
+          api.get(endpoints.colors).then(toArray),
+          api.get(endpoints.regions).then(toArray),
+        ])
+
+        if (!alive) return
+        setBrands(brandsAll)
+        setFuelTypes(fuelAll)
+        setGearboxes(gearboxAll)
+        setBodyTypes(bodyAll)
+        setDriveTypes(driveAll)
+        setColors(colorsAll)
+        setRegions(regionsAll)
+      } catch (err) {
+        console.error('Failed to load catalogs:', err)
+      }
+    }
+    load()
+    return () => { alive = false }
+  }, [])
+
+  // brand-model dependency
+  useEffect(() => {
+  if (!form.brand) {
+    setModels([])
+    handle('model', '')
+    return
+  }
+  let alive = true
+  api.get(endpoints.models, { params: { brand: form.brand } })
+    .then(res => { if (alive) setModels(toArray(res)) })
+    .catch(err => console.error(err))
+  return () => { alive = false }
+  }, [form.brand])
+
+  // Cities - regions dependency
+  useEffect(() => {
+  if (!form.region) {
+    setCities([])
+    handle('city', '')
+    return
+  }
+  let alive = true
+  api.get(endpoints.cities, { params: { region: form.region } })
+    .then(res => { if (alive) setCities(toArray(res)) })
+    .catch(err => console.error(err))
+  return () => { alive = false }
+  }, [form.region])
+
+
+
+
 
   const submit = (e) => {
     e.preventDefault()
@@ -105,6 +189,7 @@ export default function AdvancedSearch() {
     if (form.gearbox) p.set('gearbox', form.gearbox)
     if (form.euro) p.set('euro', form.euro)
     if (form.categoryBody) p.set('body', form.categoryBody)
+    if (form.color) p.set('color', form.color) // expects a Color ID (FK)
 
     // Location
     if (form.region) p.set('region', form.region)
@@ -139,6 +224,7 @@ export default function AdvancedSearch() {
       gearbox: '',
       euro: '',
       categoryBody: '',
+      color: '',
       region: '',
       city: '',
       extras: new Set(),
@@ -172,12 +258,16 @@ export default function AdvancedSearch() {
 
               <Select value={form.brand} onChange={e => handle('brand', e.target.value)}>
                 <option value="">Brand</option>
-                <option>BMW</option><option>Audi</option><option>Mercedes</option><option>VW</option>
+                {brands.map(b => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
               </Select>
 
-              <Select value={form.model} onChange={e => handle('model', e.target.value)}>
+              <Select value={form.model} onChange={e => handle('model', e.target.value)} disabled={!form.brand}>
                 <option value="">Model</option>
-                <option>3 Series</option><option>A4</option><option>C Class</option><option>Golf</option>
+                {models.map(m => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
               </Select>
 
               {/* Condition (mutually exclusive) */}
@@ -262,13 +352,16 @@ export default function AdvancedSearch() {
             <h3 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">Technical</h3>
             <div className="grid gap-3 md:grid-cols-2">
               <Select value={form.engine} onChange={e => handle('engine', e.target.value)}>
-                <option value="">Engine</option>
-                <option>Gasoline</option><option>Diesel</option><option>Electric</option>
-                <option>Hybrid</option><option>Plug-in hybrid</option><option>Gas</option><option>Hydrogen</option>
+                <option value="">Fuel type</option>
+                {fuelTypes.map(ft => (
+                  <option key={ft.id} value={ft.id}>{ft.name}</option>
+                ))}
               </Select>
               <Select value={form.gearbox} onChange={e => handle('gearbox', e.target.value)}>
                 <option value="">Gearbox</option>
-                <option>Manual</option><option>Automatic</option><option>Semi-automatic</option>
+                {gearboxes.map(g => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
               </Select>
               <Select value={form.euro} onChange={e => handle('euro', e.target.value)}>
                 <option value="">Euro standard</option>
@@ -276,10 +369,22 @@ export default function AdvancedSearch() {
                 <option>Euro 4</option><option>Euro 5</option><option>Euro 6</option>
               </Select>
               <Select value={form.categoryBody} onChange={e => handle('categoryBody', e.target.value)}>
-                <option value="">Body category</option>
-                <option>Van</option><option>Jeep</option><option>Convertible</option><option>Station wagon</option>
-                <option>Coupe</option><option>Minivan</option><option>Pickup</option><option>Sedan</option>
-                <option>Strech limousine</option><option>Hatchback</option>
+                <option value="">Body type</option>
+                {bodyTypes.map(b => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </Select>
+              <Select value={form.drive} onChange={e => handle('drive', e.target.value)}>
+                <option value="">Drive type</option>
+                {driveTypes.map(d => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
+              </Select>
+              <Select value={form.color} onChange={e => handle('color', e.target.value)} disabled={!colors.length}>
+                <option value="">Color</option>
+                {colors.map(c => (
+                <option key={c.id} value={String(c.id)}>{c.name}</option>
+                ))}
               </Select>
             </div>
           </Card>
@@ -290,11 +395,15 @@ export default function AdvancedSearch() {
             <div className="grid gap-3 md:grid-cols-2">
               <Select value={form.region} onChange={e => handle('region', e.target.value)}>
                 <option value="">Region</option>
-                <option>Sofia</option><option>Plovdiv</option><option>Varna</option><option>Burgas</option>
+                {regions.map(r => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
               </Select>
-              <Select value={form.city} onChange={e => handle('city', e.target.value)}>
+              <Select value={form.city} onChange={e => handle('city', e.target.value)} disabled={!form.region}>
                 <option value="">City</option>
-                <option>Sofia</option><option>Plovdiv</option><option>Varna</option><option>Burgas</option>
+                {cities.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
               </Select>
             </div>
           </Card>
@@ -389,4 +498,26 @@ function ExtrasGroup({ title, list, form, toggleExtra }) {
       </div>
     </div>
   )
+}
+
+async function fetchAllPages(url, params = { page_size: 200 }) {
+  const out = [];
+  let nextUrl = url;
+  let nextParams = { ...params };
+
+  while (nextUrl) {
+    const { data } = await api.get(nextUrl, { params: nextParams });
+    const chunk = Array.isArray(data) ? data : (data?.results || []);
+    out.push(...chunk);
+
+    const next = data?.next || null;
+    if (next) {
+      const base = api?.defaults?.baseURL || '';
+      nextUrl = next.startsWith(base) ? next.slice(base.length) : next;
+      nextParams = {};
+    } else {
+      nextUrl = null;
+    }
+  }
+  return out;
 }

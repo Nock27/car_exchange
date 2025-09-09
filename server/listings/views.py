@@ -5,17 +5,15 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Prefetch, Q
 from .permissions import IsSellerOrReadOnly, IsOwnerOrAdmin
 from .filters import ListingFilter
-from .models import FeatureGroup, Feature
-from .serializers import FeatureSerializer
 
 from .models import (
     Brand, CarModel, Category, FuelType, TransmissionType, BodyType, DriveType,
-    Listing, ListingImage
+    Listing, ListingImage, FeatureGroup, Feature, Color
 )
 from .serializers import (
     BrandSerializer, CarModelSerializer,
     ListingSerializer, ListingImageSerializer, CategorySerializer, FuelTypeSerializer, TransmissionTypeSerializer,
-    BodyTypeSerializer, DriveTypeSerializer
+    BodyTypeSerializer, DriveTypeSerializer, FeatureSerializer, ColorSerializer,
 )
 
 # Create your views here.
@@ -49,7 +47,8 @@ class ListingViewSet(viewsets.ModelViewSet):
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = {
-        "features": ["in"],  
+        "features": ["in"],
+        "color": ["exact"], 
     }
 
     def perform_create(self, serializer):
@@ -129,4 +128,9 @@ class DriveTypeViewSet(viewsets.ReadOnlyModelViewSet):
 class FeatureViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Feature.objects.select_related("group").order_by("group__name", "name")
     serializer_class = FeatureSerializer
+    permission_classes = [permissions.AllowAny]
+
+class ColorViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Color.objects.all().order_by("name")
+    serializer_class = ColorSerializer
     permission_classes = [permissions.AllowAny]
