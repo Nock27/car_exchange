@@ -18,6 +18,7 @@ import Button from '@/components/ui/Button'
 export default function AdvancedSearch() {
   const navigate = useNavigate()
 
+  const [categories, setCategories] = useState([])
   const [brands, setBrands] = useState([])
   const [models, setModels] = useState([])
   const [fuelTypes, setFuelTypes] = useState([])
@@ -30,7 +31,7 @@ export default function AdvancedSearch() {
 
   const [form, setForm] = useState({
     // Basics
-    category: 'cars', // cars | buses | trucks
+    category: '', // cars | buses | trucks
     brand: '',
     model: '',
     condition: '', // 'new' | 'used' | 'damaged'
@@ -92,6 +93,7 @@ export default function AdvancedSearch() {
     ;(async () => {
       try {
         const [
+          categoriesAll,
           brandsAll,
           fuelAll,
           gearboxAll,
@@ -100,6 +102,7 @@ export default function AdvancedSearch() {
           colorsAll,
           regionsAll,
         ] = await Promise.all([
+          fetchAllPages(endpoints.categories, { page_size: 200 }),
           fetchAllPages(endpoints.brands, { page_size: 500 }),
           fetchAllPages(endpoints.fueltypes, { page_size: 200 }),
           fetchAllPages(endpoints.transmissions, { page_size: 200 }),
@@ -110,6 +113,7 @@ export default function AdvancedSearch() {
         ])
 
         if (!alive) return
+        setCategories(categoriesAll)
         setBrands(brandsAll)
         setFuelTypes(fuelAll)
         setGearboxes(gearboxAll)
@@ -180,44 +184,61 @@ export default function AdvancedSearch() {
     const p = new URLSearchParams()
 
     // Basics
-    if (form.category) p.set('category', form.category)
-    if (form.brand) p.set('brand', form.brand)
-    if (form.model) p.set('model', form.model)
+    // Normalize category → numeric ID (API expects number)
+    if (form.category) {
+      if (/^\d+$/.test(String(form.category))) {
+        p.set('category', String(form.category))
+      } else {
+        // fallback: user somehow has "cars"/"buses"/"trucks" in state; map by name
+        const cat = categories.find(c =>
+          String(c.name).toLowerCase() === String(form.category).toLowerCase()
+        )
+        if (cat) p.set('category', String(cat.id))
+      }
+    }
+    if (form.brand) p.set('brand', String(form.brand))
+
+    if (form.model && /^\d+$/.test(String(form.model))) {
+      p.set('model', String(form.model))
+    }
     if (form.condition) p.set('condition', form.condition)
     if (form.parts) p.set('parts', '1')
 
+
     // Price & Mileage
-    if (form.priceFrom) p.set('price_from', form.priceFrom)
-    if (form.priceTo) p.set('price_to', form.priceTo)
+    if (form.priceFrom) p.set('price_min', form.priceFrom)
+    if (form.priceTo)   p.set('price_max', form.priceTo)
     if (form.mileageMax) p.set('mileage_max', form.mileageMax)
 
     // Production date
-    if (form.yearFrom) p.set('year_from', form.yearFrom)
-    if (form.yearTo) p.set('year_to', form.yearTo)
-    if (form.month) p.set('month', form.month)
+    if (form.yearFrom) p.set('year_min', form.yearFrom)
+    if (form.yearTo)   p.set('year_max', form.yearTo)
+    // month (UI-only; Listing has no month field)
 
     // Power & CC
-    if (form.ccFrom) p.set('cc_from', form.ccFrom)
-    if (form.ccTo) p.set('cc_to', form.ccTo)
-    if (form.powerFrom) p.set('power_from', form.powerFrom)
-    if (form.powerTo) p.set('power_to', form.powerTo)
+    if (form.ccFrom)     p.set('cc_from', form.ccFrom)
+    if (form.ccTo)       p.set('cc_to', form.ccTo)
+    if (form.powerFrom)  p.set('power_from', form.powerFrom)
+    if (form.powerTo)    p.set('power_to', form.powerTo)
 
-    // Technical
-    if (form.engine) p.set('engine', form.engine)
-    if (form.gearbox) p.set('gearbox', form.gearbox)
-    if (form.euro) p.set('euro', form.euro)
-    if (form.categoryBody) p.set('body', form.categoryBody)
-    if (form.color) p.set('color', form.color) // expects a Color ID (FK)
+    // Technical (map to API field names)
+    if (form.engine)       p.set('fuel_type', form.engine)
+    if (form.gearbox)      p.set('transmission', form.gearbox)
+    if (form.euro)         p.set('euro', form.euro)
+    if (form.categoryBody) p.set('body_type', form.categoryBody)
+    if (form.drive)        p.set('drive_type', form.drive)
+    if (form.color)        p.set('color', form.color)            // Color ID
 
     // Location
-    if (form.region) p.set('region', form.region)
-    if (form.city) p.set('city', form.city)
+    if (form.region) p.set('region', form.region)                // NEW: backend now supports this
+    if (form.city)   p.set('city', form.city)
 
-    // Extras (multiple)
+    // Extras (multiple) — UI only unless you wire to /features
     if (form.extras.size) {
       for (const x of form.extras) p.append('extra', x)
     }
 
+    console.log('Submitting AdvancedSearch params:', Object.fromEntries(p))
     navigate(`/search?${p.toString()}`)
   }
 
@@ -269,11 +290,11 @@ export default function AdvancedSearch() {
             <h3 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">Basics</h3>
             <div className="grid gap-3 md:grid-cols-2">
               <Select value={form.category} onChange={e => handle('category', e.target.value)}>
-                <option value="cars">Cars & SUVs</option>
-                <option value="buses">Buses</option>
-                <option value="trucks">Trucks</option>
+                <option value="">Category</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={String(cat.id)}>{cat.name}</option>
+                ))}
               </Select>
-
               <Select value={form.brand} onChange={e => handle('brand', e.target.value)}>
                 <option value="">Brand</option>
                 {brands.map(b => (
@@ -284,7 +305,7 @@ export default function AdvancedSearch() {
               <Select value={form.model} onChange={e => handle('model', e.target.value)} disabled={!form.brand}>
                 <option value="">Model</option>
                 {models.map(m => (
-                  <option key={m.id} value={m.id}>{m.name}</option>
+                  <option key={m.id} value={String(m.id)}>{m.name}</option>
                 ))}
               </Select>
 
