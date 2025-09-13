@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import Container from '@/components/layout/Container'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { api, endpoints } from '@/lib/api'
 import ListingCard from '@/components/ui/ListingCard'
 import Card from '@/components/ui/Card'
 
@@ -79,8 +80,19 @@ export default function Home() {
 
 function ShortSearchCard() {
   const navigate = useNavigate()
+
+  // catalogs
+  const [categories, setCategories] = useState([])
+  const [brands, setBrands] = useState([])
+  const [models, setModels] = useState([])
+  const [regions, setRegions] = useState([])
+  const [cities, setCities] = useState([])
+  const [fuelTypes, setFuelTypes] = useState([])
+  const [gearboxes, setGearboxes] = useState([])
+
+  // form (същия UI; пазим id-та за филтрите)
   const [form, setForm] = useState({
-    category: 'cars',
+    category: '',
     brand: '',
     model: '',
     region: '',
@@ -94,15 +106,112 @@ function ShortSearchCard() {
   })
   const handle = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
   const selectCondition = value => setForm(prev => ({ ...prev, condition: value }))
+
+  // paginator helper
+  async function fetchAllPages(url, params = { page_size: 200 }) {
+    const out = []
+    let nextUrl = url
+    let nextParams = { ...params }
+    while (nextUrl) {
+      const { data } = await api.get(nextUrl, { params: nextParams })
+      const chunk = Array.isArray(data) ? data : (data?.results || [])
+      out.push(...chunk)
+      const next = data?.next || null
+      if (next) {
+        const base = api?.defaults?.baseURL || ''
+        nextUrl = next.startsWith(base) ? next.slice(base.length) : next
+        nextParams = {}
+      } else {
+        nextUrl = null
+      }
+    }
+    return out
+  }
+
+  // preload catalogs (вече включва categories)
+  useEffect(() => {
+    let alive = true
+    ;(async () => {
+      try {
+        const [categoriesAll, brandsAll, regionsAll, fuelsAll, gearAll] = await Promise.all([
+          fetchAllPages(endpoints.categories, { page_size: 200 }),
+          fetchAllPages(endpoints.brands, { page_size: 500 }),
+          fetchAllPages(endpoints.regions, { page_size: 500 }),
+          fetchAllPages(endpoints.fueltypes, { page_size: 200 }),
+          fetchAllPages(endpoints.transmissions, { page_size: 200 }),
+        ])
+        if (!alive) return
+        setCategories(categoriesAll)
+        setBrands(brandsAll)
+        setRegions(regionsAll)
+        setFuelTypes(fuelsAll)
+        setGearboxes(gearAll)
+      } catch (e) {
+        console.error('ShortSearch preload error:', e)
+      }
+    })()
+    return () => { alive = false }
+  }, [])
+
+  // brand → models
+  useEffect(() => {
+    const brandId = form.brand
+    if (!brandId) { setModels([]); return }
+    let alive = true
+    ;(async () => {
+      try {
+        const modelsAll = await fetchAllPages(endpoints.models, { brand: brandId, page_size: 500 })
+        if (alive) setModels(modelsAll)
+      } catch (e) {
+        console.error(e)
+      }
+    })()
+    return () => { alive = false }
+  }, [form.brand])
+
+
+  // region → cities
+  useEffect(() => {
+    const regionId = form.region
+    if (!regionId) { setCities([]); return }
+    let alive = true
+    ;(async () => {
+      try {
+        const citiesAll = await fetchAllPages(endpoints.cities, { region: regionId, page_size: 500 })
+        if (alive) setCities(citiesAll)
+      } catch (e) {
+        console.error(e)
+      }
+    })()
+    return () => { alive = false }
+  }, [form.region])
+
+
+  // submit → /search (като Search.jsx)
   const submit = e => {
     e.preventDefault()
     const params = new URLSearchParams()
-    Object.entries({
-      category: form.category, brand: form.brand, model: form.model, region: form.region,
-      city: form.city, max_price: form.maxPrice, year: form.year, engine: form.engine,
-      gearbox: form.gearbox, condition: form.condition,
-    }).forEach(([k, v]) => { if (v) params.append(k, v) })
-    if (form.parts) params.append('parts', '1')
+
+    if (form.category && /^\d+$/.test(String(form.category))) {
+      params.set('category', String(form.category))
+    }
+    if (form.brand) params.set('brand', String(form.brand))
+    if (form.model) params.set('model', String(form.model))
+    if (form.region) params.set('region', String(form.region))
+    if (form.city) params.set('city', String(form.city))
+
+    if (form.engine) params.set('fuel_type', String(form.engine))
+    if (form.gearbox) params.set('transmission', String(form.gearbox))
+
+    if (form.maxPrice) params.set('price_max', String(form.maxPrice))
+    if (form.year) {
+      params.set('year_min', String(form.year))
+      params.set('year_max', String(form.year))
+    }
+
+    params.set('ordering', '-created_at')
+    params.set('page_size', '24')
+
     navigate(`/search?${params.toString()}`)
   }
 
@@ -111,33 +220,68 @@ function ShortSearchCard() {
       <h3 className="mb-3 text-lg font-semibold text-neutral-900 dark:text-white">Quick search</h3>
       <form onSubmit={submit} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <select className={selectCls} value={form.category} onChange={e => handle('category', e.target.value)}>
-          <option value="cars">Cars & SUVs</option><option value="buses">Buses</option><option value="trucks">Trucks</option>
+          <option value="">Category</option>
+          {categories.map(c => (
+            <option key={c.id} value={String(c.id)}>{c.name}</option>
+          ))}
         </select>
+
         <select className={selectCls} value={form.brand} onChange={e => handle('brand', e.target.value)}>
-          <option value="">Brand</option><option>BMW</option><option>Audi</option><option>Mercedes</option><option>VW</option>
+          <option value="">Brand</option>
+          {brands.map(b => (
+            <option key={b.id} value={String(b.id)}>{b.name}</option>
+          ))}
         </select>
-        <select className={selectCls} value={form.model} onChange={e => handle('model', e.target.value)}>
-          <option value="">Model</option><option>3 Series</option><option>A4</option><option>C Class</option><option>Golf</option>
+
+        <select className={selectCls} value={form.model} onChange={e => handle('model', e.target.value)} disabled={!form.brand}>
+          <option value="">Model</option>
+          {models.map(m => (
+            <option key={m.id} value={String(m.id)}>{m.name}</option>
+          ))}
         </select>
-        <select className={selectCls} value={form.region} onChange={e => handle('region', e.target.value)}>
-          <option value="">Region</option><option>Sofia</option><option>Plovdiv</option><option>Varna</option><option>Burgas</option>
+
+        <select className={selectCls} value={form.region} onChange={e => { const v = e.target.value; handle('region', v); handle('city', ''); }}>
+          <option value="">Region</option>
+          {regions.map(r => (
+            <option key={r.id} value={String(r.id)}>{r.name}</option>
+          ))}
         </select>
-        <select className={selectCls} value={form.city} onChange={e => handle('city', e.target.value)}>
-          <option value="">City</option><option>Sofia</option><option>Plovdiv</option><option>Varna</option><option>Burgas</option>
+
+        <select className={selectCls} value={form.city} onChange={e => handle('city', e.target.value)} disabled={!form.region}>
+          <option value="">City</option>
+          {cities.map(c => (
+            <option key={c.id} value={String(c.id)}>{c.name}</option>
+          ))}
         </select>
-        <input className={inputCls} type="number" min="0" placeholder="Max price" value={form.maxPrice} onChange={e => handle('maxPrice', e.target.value)} />
+
+        <input
+          className={inputCls}
+          type="number"
+          min="0"
+          placeholder="Max price"
+          value={form.maxPrice}
+          onChange={e => handle('maxPrice', e.target.value)}
+        />
+
         <select className={selectCls} value={form.year} onChange={e => handle('year', e.target.value)}>
           <option value="">Production year</option>
           {Array.from({ length: new Date().getFullYear() - 1929 }, (_, i) => 1930 + i).reverse().map(y => (
-            <option key={y} value={y}>{y}</option>
+            <option key={y} value={String(y)}>{y}</option>
           ))}
         </select>
+
         <select className={selectCls} value={form.engine} onChange={e => handle('engine', e.target.value)}>
-          <option value="">Engine</option><option>Gasoline</option><option>Diesel</option><option>Electric</option>
-          <option>Hybrid</option><option>Plug-in hybrid</option><option>Gas</option><option>Hydrogen</option>
+          <option value="">Engine</option>
+          {fuelTypes.map(ft => (
+            <option key={ft.id} value={String(ft.id)}>{ft.name}</option>
+          ))}
         </select>
+
         <select className={selectCls} value={form.gearbox} onChange={e => handle('gearbox', e.target.value)}>
-          <option value="">Gearbox</option><option>Manual</option><option>Automatic</option><option>Semi-automatic</option>
+          <option value="">Gearbox</option>
+          {gearboxes.map(g => (
+            <option key={g.id} value={String(g.id)}>{g.name}</option>
+          ))}
         </select>
 
         <div className="grid grid-cols-3 items-center gap-2">
@@ -151,10 +295,16 @@ function ShortSearchCard() {
         </div>
 
         <div className="col-span-full mt-2 flex flex-wrap gap-3">
-          <button type="submit" className="rounded-lg bg-brand-600 px-5 py-2.5 text-white shadow hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-400">
+          <button
+            type="submit"
+            className="rounded-lg bg-brand-600 px-5 py-2.5 text-white shadow hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-400"
+          >
             Search
           </button>
-          <Link to="/advanced-search" className="rounded-lg border border-neutral-300 px-5 py-2.5 text-neutral-800 hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-neutral-200 dark:border-gray-700 dark:text-neutral-100 dark:hover:bg-gray-800 dark:focus:ring-gray-700">
+          <Link
+            to="/advanced-search"
+            className="rounded-lg border border-neutral-300 px-5 py-2.5 text-neutral-800 hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-neutral-200 dark:border-gray-700 dark:text-neutral-100 dark:hover:bg-gray-800 dark:focus:ring-gray-700"
+          >
             Advanced search
           </Link>
         </div>
@@ -162,6 +312,8 @@ function ShortSearchCard() {
     </Card>
   )
 }
+
+
 
 const inputBase =
   'w-full rounded-lg border bg-white/80 px-3 py-2 text-sm text-neutral-800 shadow-sm ' +

@@ -214,7 +214,7 @@ export default function Search() {
   // region → cities
   useEffect(() => {
     const regionId = side.region
-    if (!regionId) { setCities([]); setSide(s => ({ ...s, city: '' })); return }
+    if (!regionId) { setCities([]); return }
     let alive = true
     ;(async () => {
       try {
@@ -226,6 +226,29 @@ export default function Search() {
     })()
     return () => { alive = false }
   }, [side.region])
+
+  useEffect(() => {
+  if (!side.city) return
+  if (cities.length === 0) return
+  const exists = cities.some(c => String(c.id) === String(side.city))
+  if (!exists) {
+    setSide(s => ({ ...s, city: '' }))
+  }
+  }, [cities])
+
+  const urlCity = q.get('city') || ''
+
+  useEffect(() => {
+    if (!side.region) return
+    if (!urlCity) return
+    if (cities.length === 0) return
+
+    const exists = cities.some(c => String(c.id) === String(urlCity))
+    if (exists && String(side.city) !== String(urlCity)) {
+      setSide(s => ({ ...s, city: String(urlCity) }))
+    }
+  }, [cities, side.region])
+
 
   async function fetchListings(urlOrParams) {
     setLoading(true); setError(null)
