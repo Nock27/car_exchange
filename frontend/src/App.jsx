@@ -14,6 +14,11 @@ import RequireAuth from '@/components/routing/RequireAuth'
 import Profile from '@/pages/Profile'
 import RequirePhone from '@/components/routing/RequirePhone'
 
+// Non-interactive pages
+import Terms from '@/pages/Terms'
+import Privacy from '@/pages/Privacy'
+import Contact from '@/pages/Contact'
+
 export default function App() {
   return (
     <Routes>
@@ -39,6 +44,11 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="*" element={<NotFound />} />
+
+        {/* Non interactive pages paths */}
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/contact" element={<Contact />} />
       </Route>
     </Routes>
   )
