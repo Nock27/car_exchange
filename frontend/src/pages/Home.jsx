@@ -284,16 +284,6 @@ function ShortSearchCard() {
           ))}
         </select>
 
-        <div className="grid grid-cols-3 items-center gap-2">
-          <Condition label="New" checked={form.condition === 'new'} onChange={() => selectCondition('new')} />
-          <Condition label="Used" checked={form.condition === 'used'} onChange={() => selectCondition('used')} />
-          <Condition label="Damaged" checked={form.condition === 'damaged'} onChange={() => selectCondition('damaged')} />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <FlagCheck label="For parts" checked={form.parts} onChange={() => handle('parts', !form.parts)} />
-        </div>
-
         <div className="col-span-full mt-2 flex flex-wrap gap-3">
           <button
             type="submit"
