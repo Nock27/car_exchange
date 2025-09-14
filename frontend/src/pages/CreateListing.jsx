@@ -391,9 +391,49 @@ useEffect(() => {
     return needed.every(k => !!form[k])
   }, [form])
 
+  const validateForm = () => {
+  const errors = []
+
+  // Price > 0
+  if (form.price && Number(form.price) <= 0) {
+    errors.push("Price must be greater than 0.")
+  }
+
+  // Mileage ≥ 0
+  if (form.mileage && Number(form.mileage) < 0) {
+    errors.push("Mileage cannot be negative.")
+  }
+
+  // Year between 1930 and current year
+  const year = Number(form.year)
+  const currentYear = new Date().getFullYear()
+  if (form.year && (year < 1930 || year > currentYear)) {
+    errors.push(`Year must be between 1930 and ${currentYear}.`)
+  }
+
+  // Engine CC sanity check (optional)
+  if (form.engine_cc && Number(form.engine_cc) < 100) {
+    errors.push("Engine size (cc) must be at least 100.")
+  }
+
+  // Power HP sanity check (optional)
+  if (form.power_hp && Number(form.power_hp) < 10) {
+    errors.push("Power must be at least 10 hp.")
+  }
+
+  return errors
+  }
+
   const submit = async (e) => {
   e.preventDefault()
+  
+  const errs = validateForm(form);
+  if (errs.length) {
+    alert(errs.join('\n'));
+    return;
+  }
   setError(null)
+
 
   if (!isAuthed) return setError('You must be logged in to post a listing.')
   if (!canSubmit) return setError('Please fill in all required fields.')
