@@ -13,6 +13,7 @@ import NotFound from '@/pages/NotFound'
 import RequireAuth from '@/components/routing/RequireAuth'
 import Profile from '@/pages/Profile'
 import RequirePhone from '@/components/routing/RequirePhone'
+import EditListing from '@/pages/EditListing'
 
 // Non-interactive pages
 import Terms from '@/pages/Terms'
@@ -38,6 +39,7 @@ export default function App() {
             <Route path="/create-listing" element={<CreateListing />} />
           </Route>
           <Route path="/my-listings" element={<MyListings />} />
+          <Route path="/listings/:id/edit" element={<EditListing />} />
           <Route path="/profile" element={<Profile />} />
         </Route>
 
