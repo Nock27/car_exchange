@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { api, endpoints } from '@/lib/api'
 import ListingCard from '@/components/ui/ListingCard'
 import Card from '@/components/ui/Card'
+import TrendingListings from '@/components/home/TrendingListings'
 
 export default function Home() {
   return (
@@ -63,12 +64,7 @@ export default function Home() {
             <Link to="/search" className="text-sm text-info-500 hover:underline">Browse all</Link>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <ListingCard />
-            <ListingCard title="2017 Audi A4 2.0 TDI" price="€13,200" specs="Diesel • 210,000 km • Manual" location="Plovdiv" />
-            <ListingCard title="2019 VW Golf 1.5 TSI" price="€16,450" specs="Gasoline • 95,000 km • Automatic" location="Varna" />
-            <ListingCard title="2016 Mercedes C220d" price="€17,900" specs="Diesel • 180,500 km • Automatic" location="Sofia" />
-            <ListingCard title="2015 BMW 520d" price="€18,300" specs="Diesel • 220,000 km • Automatic" location="Burgas" />
-            <ListingCard title="2020 Toyota Corolla" price="€18,900" specs="Hybrid • 60,000 km • Automatic" location="Sofia" />
+            <TrendingListings />
           </div>
         </Container>
       </section>
