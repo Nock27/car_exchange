@@ -100,6 +100,21 @@ class ListingViewSet(viewsets.ModelViewSet):
         img = ListingImage.objects.create(listing=listing, image=file, order=listing.images.count())
         return Response(ListingImageSerializer(img).data, status=status.HTTP_201_CREATED)
 
+    @action(detail=True, methods=["delete"], url_path=r"images/(?P<image_id>\d+)")
+    def delete_image(self, request, pk=None, image_id=None):
+        listing = self.get_object()
+
+        try:
+            img = listing.images.get(pk=image_id)
+        except ListingImage.DoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if not (request.user.is_staff or request.user.is_superuser or listing.seller_id == request.user.id):
+            return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
+
+        img.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Category.objects.all().order_by("name")
     serializer_class = CategorySerializer

@@ -6,6 +6,7 @@ import Card from '@/components/ui/Card'
 import Select from '@/components/ui/Select'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
+import { PhotosEditor } from '@/components/listings/PhotosEditor'
 import { api, endpoints } from '@/lib/api'
 
 export default function EditListing() {
@@ -27,6 +28,8 @@ export default function EditListing() {
   const [regions, setRegions] = useState([])
   const [cities, setCities] = useState([])
   const [colors, setColors] = useState([])
+  const [images, setImages] = useState([])
+
 
   // fallback labels for selected region/city (if options not loaded yet)
   const [prefillNames, setPrefillNames] = useState({ region: '', city: '' })
@@ -203,6 +206,8 @@ export default function EditListing() {
           region: data.region_name || data.region?.name || '',
           city:   data.city_name || data.city?.name || '',
         })
+
+        setImages(Array.isArray(data.images) ? data.images : [])
 
         // Warm dependent lists so the selected IDs appear in options
         if (brandId) {
@@ -515,6 +520,11 @@ export default function EditListing() {
               </div>
             </div>
           </Card>
+
+          <PhotosEditor
+            listingId={id}
+            initialImages={images}
+          />
 
           <Card className="lg:col-span-2">
             <h3 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">Description</h3>

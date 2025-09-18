@@ -1,7 +1,9 @@
 import Card from './Card'
 import Button from './Button'
+import { Link } from 'react-router-dom'
 
 export default function ListingCard({
+  id = null,
   image = null,
   title = '2018 BMW 320d',
   price = '€15,900',
@@ -31,7 +33,9 @@ export default function ListingCard({
           <div className="mt-1 truncate text-sm text-neutral-600 dark:text-neutral-300">{specs}</div>
           <div className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">{location}</div>
           <div className="mt-3">
-            <Button onClick={onView} className="px-3 py-1.5">View details</Button>
+            <Button as={Link} to={`/listings/${id}`} className="px-3 py-1.5">
+              View details
+            </Button>
           </div>
         </div>
       </div>

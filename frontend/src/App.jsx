@@ -14,6 +14,7 @@ import RequireAuth from '@/components/routing/RequireAuth'
 import Profile from '@/pages/Profile'
 import RequirePhone from '@/components/routing/RequirePhone'
 import EditListing from '@/pages/EditListing'
+import ListingDetail from '@/pages/ListingDetail'
 
 // Non-interactive pages
 import Terms from '@/pages/Terms'
@@ -40,6 +41,7 @@ export default function App() {
           </Route>
           <Route path="/my-listings" element={<MyListings />} />
           <Route path="/listings/:id/edit" element={<EditListing />} />
+          <Route path="/listings/:id" element={<ListingDetail />} />
           <Route path="/profile" element={<Profile />} />
         </Route>
 
