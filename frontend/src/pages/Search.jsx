@@ -16,7 +16,8 @@ function useQuery() {
 }
 
 function normalizeApiUrl(nextOrPrev) {
-  if (!nextOrPrev) return null
+  // treat null/undefined/empty/"null" as no page
+  if (!nextOrPrev || nextOrPrev === '' || nextOrPrev === 'null') return null
   const base = api?.defaults?.baseURL || ''
   try {
     return nextOrPrev.startsWith(base) ? nextOrPrev.slice(base.length) : nextOrPrev
@@ -24,6 +25,7 @@ function normalizeApiUrl(nextOrPrev) {
     return nextOrPrev
   }
 }
+
 
 // map UI select -> DRF ordering strings
 const ORDER_UI_TO_API = {
@@ -125,6 +127,26 @@ export default function Search() {
     }
     return p
   }, [q])
+
+  // ---- pagination helpers (must come AFTER apiParams is defined) ----
+  const currentPage = useMemo(() => {
+    const p = parseInt(q.get('page') || '1', 10)
+    return Number.isFinite(p) && p > 0 ? p : 1
+  }, [q])
+
+  // prefer explicit page_size from the URL; fall back to apiParams or 24
+  const pageSize = useMemo(() => {
+    const fromQs = parseInt(q.get('page_size') || '', 10)
+    if (Number.isFinite(fromQs) && fromQs > 0) return fromQs
+    const fromParams = parseInt(String(apiParams.page_size || '24'), 10)
+    return Number.isFinite(fromParams) && fromParams > 0 ? fromParams : 24
+  }, [q, apiParams])
+
+  const totalPages = useMemo(
+    () => (count ? Math.ceil(count / pageSize) : 0),
+    [count, pageSize]
+  )
+
 
   // preload catalogs (brands, regions, fuel, gearboxes)
   useEffect(() => {
@@ -500,15 +522,40 @@ export default function Search() {
                 )
               })}
             </div>
+              {(prevUrl || nextUrl) && (
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                {prevUrl && (
+                  <Button
+                    variant="secondary"
+                    className="px-3 py-1.5"
+                    type="button"
+                    onClick={() => goPage(prevUrl)}
+                    disabled={loading}
+                    aria-disabled={loading}
+                  >
+                    « Prev
+                  </Button>
+                )}
 
-            <div className="mt-6 flex justify-center gap-2">
-              <Button variant="secondary" className="px-3 py-1.5" onClick={() => goPage(prevUrl)} disabled={!prevUrl}>
-                « Prev
-              </Button>
-              <Button className="px-3 py-1.5" onClick={() => goPage(nextUrl)} disabled={!nextUrl}>
-                Next »
-              </Button>
-            </div>
+                {totalPages > 1 && (
+                  <span className="text-sm text-neutral-600 dark:text-neutral-300">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                )}
+
+                {nextUrl && (
+                  <Button
+                    className="px-3 py-1.5"
+                    type="button"
+                    onClick={() => goPage(nextUrl)}
+                    disabled={loading}
+                    aria-disabled={loading}
+                  >
+                    Next »
+                  </Button>
+                )}
+              </div>
+            )}
           </section>
         </div>
       </Container>
