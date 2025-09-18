@@ -68,6 +68,48 @@ export default function ListingDetail() {
     return ''
   }
 
+  // ---- contact + address helpers ----
+  const firstNonEmpty = (...vals) => vals.find(v => v != null && String(v).trim() !== '') || ''
+
+  const extractContact = (listing) => {
+    if (!listing) return { nickname: '', email: '', phone: '' }
+    const seller  = listing.seller ?? listing.owner ?? listing.user ?? {}
+    const profile = seller.profile ?? listing.seller_profile ?? listing.owner_profile ?? listing.user_profile ?? {}
+
+    // nickname priority
+    const nickname = firstNonEmpty(
+      listing.seller_nickname,
+      profile.nickname,
+      seller.nickname,
+      seller.username,
+      `${seller.first_name || ''} ${seller.last_name || ''}`.trim()
+    )
+
+    // your backend already returns these (per our check), keep fallbacks
+    const email = firstNonEmpty(listing.seller_contact_email, profile.email, seller.email)
+    const phone = firstNonEmpty(listing.seller_contact_phone, profile.phone_e164, profile.phone, seller.phone)
+
+    return { nickname, email, phone }
+  }
+
+  // Build a human address from whatever we have
+  const buildAddress = (listing, names) => {
+    const parts = [
+      listing.address,               // e.g. "ul. Ivan Vazov 10"
+      listing.address_line,
+      listing.street,
+      listing.location_address,
+      listing.postal_code,
+      names.city,
+      names.region,
+    ].filter(v => v && String(v).trim() !== '')
+    return parts.join(', ')
+  }
+
+  // Maps search URL
+  const mapsUrl = (addr) => addr ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}` : ''
+
+
   // images list (sorted) + active index
   const images = useMemo(() => {
     const list = Array.isArray(listing?.images) ? listing.images.slice() : []
@@ -224,6 +266,8 @@ export default function ListingDetail() {
   return `${base.replace(/\/+$/, '')}${u.startsWith('/') ? '' : '/'}${u}`
   }
 
+  const contact = extractContact(listing)
+  const addressText = buildAddress(listing, names)
   const embedUrl = toEmbedUrl(listing.video_url)
   const priceText = listing.price != null && listing.price !== '' ? money.format(listing.price) : '—'
   const mainSrc = images[activeIdx]?.image ? absUrl(images[activeIdx].image) : ''
@@ -356,6 +400,11 @@ export default function ListingDetail() {
           <Card>
             <h3 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">Location</h3>
             <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+              {/* Area */}
+              <div className="col-span-2">
+                <div className="text-[11px] uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Area</div>
+              </div>
+
               <div>
                 <div className={labelTextCls}>Region</div>
                 <div className={valueTextCls}>{names.region || '—'}</div>
@@ -364,17 +413,58 @@ export default function ListingDetail() {
                 <div className={labelTextCls}>City</div>
                 <div className={valueTextCls}>{names.city || '—'}</div>
               </div>
+
+              {addressText && (
+                <div className="col-span-2">
+                  <div className={labelTextCls}>Address</div>
+                  <div className={valueTextCls}>
+                    <a href={mapsUrl(addressText)} target="_blank" rel="noreferrer" className="hover:underline">
+                      {addressText}
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {/* Contact */}
+              {(contact.nickname || contact.phone || contact.email) && (
+                <>
+                  <div className="col-span-2 mt-2">
+                    <div className="text-[11px] uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Seller contact</div>
+                  </div>
+
+                  {contact.nickname && (
+                    <div className="col-span-2">
+                      <div className={labelTextCls}>Nickname</div>
+                      <div className={valueTextCls}>{contact.nickname}</div>
+                    </div>
+                  )}
+
+                  {contact.phone && (
+                    <div>
+                      <div className={labelTextCls}>Phone</div>
+                      <div className={valueTextCls}>
+                        <a href={`tel:${contact.phone}`} className="hover:underline">{contact.phone}</a>
+                      </div>
+                    </div>
+                  )}
+
+                  {contact.email && (
+                    <div>
+                      <div className={labelTextCls}>Email</div>
+                      <div className={valueTextCls}>
+                        <a href={`mailto:${contact.email}`} className="hover:underline">{contact.email}</a>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
-            {/* Owner actions */}
+
+            {/* Owner actions … (leave your existing owner buttons here) */}
             {isOwner && (
               <div className="mt-6 flex flex-wrap gap-2">
-                <Link to={`/listings/${id}/edit`}>
-                  <Button>Edit</Button>
-                </Link>
-                <Button variant="danger" onClick={doDelete} disabled={saving}>
-                  {saving ? 'Deleting…' : 'Delete'}
-                </Button>
+                {/* ... */}
               </div>
             )}
           </Card>
