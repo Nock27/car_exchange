@@ -41,6 +41,7 @@ export default function Navbar() {
         <nav className="hidden items-center gap-1 md:flex" aria-label="Primary">
           <NavItem to="/search">Browse</NavItem>
           <NavItem to="/advanced-search">Advanced Search</NavItem>
+          <NavItem to="/map">Map search</NavItem>
 
           {isAuthed && <NavItem to="/my-listings">My Listings</NavItem>}
           {isAuthed && <NavItem to="/create-listing"><span className="text-brand-700 dark:text-brand-400">Post Listing</span></NavItem>}
@@ -83,6 +84,7 @@ export default function Navbar() {
           <Container className="flex flex-col">
             <NavItem to="/search" onClick={() => setOpen(false)}>Browse</NavItem>
             <NavItem to="/advanced-search" onClick={() => setOpen(false)}>Advanced Search</NavItem>
+            <NavItem to="/map" onClick={() => setOpen(false)}>Map search</NavItem>
 
             {isAuthed && <NavItem to="/my-listings" onClick={() => setOpen(false)}>My Listings</NavItem>}
             {isAuthed && <NavItem to="/create-listing" onClick={() => setOpen(false)}><span className="text-brand-700 dark:text-brand-400">Post Listing</span></NavItem>}

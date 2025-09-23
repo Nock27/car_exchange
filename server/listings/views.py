@@ -114,6 +114,68 @@ class ListingViewSet(viewsets.ModelViewSet):
 
         img.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+    @action(detail=False, methods=["get"], url_path="map")
+    def map_points(self, request, *args, **kwargs):
+        """
+        Return only minimal data for the map: id, title, price, lat/lng, region/city names,
+        and a short label. Applies same GET filters as the normal list view, but excludes
+        items without coordinates.
+        """
+        qs = self.get_queryset().filter(latitude__isnull=False, longitude__isnull=False)
+
+        p = request.query_params
+
+        # numeric FK filters
+        for key in ["brand", "model", "fuel_type", "transmission",
+                    "body_type", "drive_type", "color", "category", "city"]:
+            v = p.get(key)
+            if v and v.isdigit():
+                qs = qs.filter(**{f"{key}_id": int(v)})
+
+        # region (via city.region)
+        region = p.get("region")
+        if region and region.isdigit():
+            qs = qs.filter(city__region_id=int(region))
+
+        # ranges
+        t = p.get("price_min")
+        if t and t.isdigit():
+            qs = qs.filter(price__gte=int(t))
+        t = p.get("price_max")
+        if t and t.isdigit():
+            qs = qs.filter(price__lte=int(t))
+
+        t = p.get("year_min")
+        if t and t.isdigit():
+            qs = qs.filter(year__gte=int(t))
+        t = p.get("year_max")
+        if t and t.isdigit():
+            qs = qs.filter(year__lte=int(t))
+
+        t = p.get("mileage_max")
+        if t and t.isdigit():
+            qs = qs.filter(mileage__lte=int(t))
+
+        # simple text search
+        search = p.get("search")
+        if search:
+            qs = qs.filter(Q(title__icontains=search) | Q(description__icontains=search))
+
+        qs = qs.select_related("brand", "model", "city", "city__region").order_by("-created_at")[:2000]
+
+        data = []
+        for x in qs:
+            data.append({
+                "id": x.id,
+                "title": x.title or f"{getattr(x.brand, 'name', '')} {getattr(x.model, 'name', '')}".strip() or "Listing",
+                "price": x.price,
+                "lat": x.latitude,
+                "lng": x.longitude,
+                "region_name": getattr(getattr(x.city, "region", None), "name", None),
+                "city_name": getattr(x.city, "name", None),
+            })
+        return Response({"results": data})
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Category.objects.all().order_by("name")

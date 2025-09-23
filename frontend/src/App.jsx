@@ -15,6 +15,7 @@ import Profile from '@/pages/Profile'
 import RequirePhone from '@/components/routing/RequirePhone'
 import EditListing from '@/pages/EditListing'
 import ListingDetail from '@/pages/ListingDetail'
+import MapView from '@/pages/MapView'
 
 // Non-interactive pages
 import Terms from '@/pages/Terms'
@@ -26,6 +27,7 @@ export default function App() {
     <Routes>
       <Route element={<Layout />}>
         <Route index element={<Home />} />
+        <Route path="/map" element={<MapView />} />
         <Route path="/search" element={<Search />} />
 
         {/* BOTH paths resolve to the advanced search page */}
