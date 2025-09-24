@@ -1,0 +1,47 @@
+.map-card {
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  gap: 10px;
+  width: 260px;               /* fixed so text won’t overflow */
+  max-width: 260px;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.map-card__img {
+  width: 84px;
+  height: 84px;
+  object-fit: cover;
+  border-radius: 8px;
+  background: #222;
+}
+
+.map-card__img--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #bbb;
+  font-size: 12px;
+}
+
+.map-card__body {
+  min-width: 0;               /* enable ellipsis */
+}
+
+.map-card__title {
+  font-weight: 600;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.map-card__price {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.map-card__link {
+  display: inline-block;
+  text-decoration: underline;
+}

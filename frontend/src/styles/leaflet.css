@@ -1,0 +1,53 @@
+/* Keep Leaflet's tooltip chrome minimal for our card */
+.leaflet-tooltip.leaflet-custom-tooltip{
+  padding:0;
+  background:transparent;
+  border:0;
+  box-shadow:none;
+}
+
+/* Our card container with a hard max width */
+.leaflet-custom-tooltip .mv-card{
+  max-width:260px;           /* <= clamp width */
+  background:#fff;
+  border:1px solid rgba(0,0,0,.08);
+  border-radius:8px;
+  box-shadow:0 6px 20px rgba(0,0,0,.12);
+  overflow:hidden;
+}
+
+.leaflet-custom-tooltip .mv-body{
+  display:flex;
+  gap:8px;
+  align-items:flex-start;
+  padding:8px;
+}
+
+.leaflet-custom-tooltip .mv-img{
+  width:96px; height:72px; object-fit:cover; border-radius:6px; flex:0 0 auto;
+}
+
+/* Title: clamp to 2 lines with ellipsis */
+.leaflet-custom-tooltip .mv-title{
+  font-weight:600; font-size:12px; line-height:1.25;
+  overflow:hidden;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  word-break:break-word;
+}
+
+.leaflet-custom-tooltip .mv-price{
+  opacity:.85; margin-top:2px; font-size:12px;
+}
+
+/* Link: single line with ellipsis */
+.leaflet-custom-tooltip .mv-link{
+  display:block;
+  margin-top:6px;
+  text-decoration:underline;
+  color:#2563eb;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}

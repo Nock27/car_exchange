@@ -7,6 +7,7 @@ import Input from '@/components/ui/Input'
 import { api, endpoints } from '@/lib/api'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import '@/styles/map-card.css';
 
 const bulgariaCenter = [42.7339, 25.4858]
 const bulgariaZoom = 7
@@ -221,21 +222,24 @@ export default function MapView() {
 
           // Rich hover: title + price + first photo (if any)
           const tooltipHtml = `
-            <div style="display:flex;gap:8px;align-items:flex-start;max-width:280px;">
-              ${img ? `<img src="${img}" alt="" style="width:96px;height:72px;object-fit:cover;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,.2);" />` : ''}
-              <div style="font-size:12px;line-height:1.25;">
-                <div style="font-weight:600;">${escapeHtml(title)}</div>
-                ${price ? `<div style="opacity:.85;margin-top:2px;">${escapeHtml(price)}</div>` : ''}
-                <div style="margin-top:6px;"><span style="text-decoration:underline;color:#2563eb;">Open details</span></div>
+            <div class="map-card">
+              ${img
+                ? `<img class="map-card__img" src="${img}" alt="">`
+                : `<div class="map-card__img map-card__img--placeholder">No image</div>`
+              }
+              <div class="map-card__body">
+                <div class="map-card__title" title="${escapeHtml(title)}">${escapeHtml(title)}</div>
+                ${price ? `<div class="map-card__price">${escapeHtml(price)}</div>` : ''}
+                <div class="map-card__link">Open details</div>
               </div>
             </div>
-          `
+          `;
           marker.bindTooltip(tooltipHtml, {
             direction: 'top',
             opacity: 0.98,
             sticky: true,
             className: 'leaflet-custom-tooltip',
-          })
+          });
 
           // Click -> open listing in new tab (/listings/:id)
           marker.on('click', () => {
