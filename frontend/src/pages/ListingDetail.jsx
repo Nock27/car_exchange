@@ -5,6 +5,7 @@ import SectionHeader from '@/components/ui/SectionHeader'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import { api, endpoints } from '@/lib/api'
+import { useAuth } from '@/context/AuthContext'
 
 export default function ListingDetail() {
   const { id } = useParams()
@@ -118,6 +119,25 @@ export default function ListingDetail() {
   }, [listing])
 
   const [activeIdx, setActiveIdx] = useState(0)
+
+  const auth = useAuth()
+  const isAuthed = !!auth?.isAuthed
+  const [isFav, setIsFav] = useState(!!listing?.is_favorited)
+
+  useEffect(() => {
+    setIsFav(!!listing?.is_favorited)
+  }, [listing?.is_favorited])
+
+  async function toggleFavDetail() {
+    if (!isAuthed || !listing?.id) return
+    try {
+      if (!isFav) await api.post(endpoints.favorite(listing.id))
+      else await api.delete(endpoints.favorite(listing.id))
+      setIsFav(v => !v)
+    } catch (e) {
+      console.error('favorite toggle failed', e)
+    }
+  }
 
   // reset to first photo when navigating to a different listing id
   useEffect(() => { setActiveIdx(0) }, [id])
@@ -292,8 +312,22 @@ export default function ListingDetail() {
                 {names.category || '—'}
               </div>
             </div>
-            <div className="text-2xl font-bold text-neutral-900 dark:text-white">
-              {priceText} <span className="text-base font-medium opacity-70">EUR</span>
+            <div className="flex items-start gap-3">
+              <div className="text-2xl font-bold text-neutral-900 dark:text-white">
+                {priceText} <span className="text-base font-medium opacity-70">EUR</span>
+              </div>
+              <button
+                type="button"
+                onClick={toggleFavDetail}
+                title={isFav ? 'Remove from favorites' : 'Add to favorites'}
+                aria-pressed={isFav}
+                aria-label={isFav ? 'Remove from favorites' : 'Add to favorites'}
+                className={`text-2xl leading-none select-none transition-opacity ${
+                  isFav ? 'opacity-100' : 'opacity-60 hover:opacity-90'
+                }`}
+              >
+                {isFav ? '❤' : '♡'}
+              </button>
             </div>
           </div>
         </Card>

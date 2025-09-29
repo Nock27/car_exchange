@@ -16,6 +16,7 @@ import RequirePhone from '@/components/routing/RequirePhone'
 import EditListing from '@/pages/EditListing'
 import ListingDetail from '@/pages/ListingDetail'
 import MapView from '@/pages/MapView'
+import Favorites from '@/pages/Favorites'
 
 // Non-interactive pages
 import Terms from '@/pages/Terms'
@@ -45,6 +46,7 @@ export default function App() {
           <Route path="/listings/:id/edit" element={<EditListing />} />
           <Route path="/listings/:id" element={<ListingDetail />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/favorites" element={<Favorites />} />
         </Route>
 
         <Route path="/login" element={<Login />} />

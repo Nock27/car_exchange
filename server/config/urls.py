@@ -41,6 +41,7 @@ router.register(r'regions', RegionViewSet, basename='region')
 router.register(r'cities', CityViewSet, basename='city')
 
 router.register(r"features", listings_views.FeatureViewSet, basename="feature")
+router.register(r"favorites", listings_views.FavoriteViewSet, basename="favorite")
 
 urlpatterns = [
     path('admin/', admin.site.urls),

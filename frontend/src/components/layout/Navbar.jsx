@@ -42,7 +42,7 @@ export default function Navbar() {
           <NavItem to="/search">Browse</NavItem>
           <NavItem to="/advanced-search">Advanced Search</NavItem>
           <NavItem to="/map">Map search</NavItem>
-
+          {isAuthed && (<NavLink to="/favorites" className={typeof linkCls !== 'undefined' ? linkCls : 'px-3 py-2 text-sm hover:underline'}>Favorites</NavLink>)}
           {isAuthed && <NavItem to="/my-listings">My Listings</NavItem>}
           {isAuthed && <NavItem to="/create-listing"><span className="text-brand-700 dark:text-brand-400">Post Listing</span></NavItem>}
           {isAuthed && <NavItem to="/profile">Profile</NavItem>}

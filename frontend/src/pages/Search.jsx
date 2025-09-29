@@ -7,7 +7,7 @@ import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import ListingCard, { ListingCardSkeleton } from '@/components/ui/ListingCard'
 import { api, endpoints } from '@/lib/api'
-
+import { useAuth } from '@/context/AuthContext'
 /* ----------------------------- helpers ----------------------------- */
 
 function useQuery() {
@@ -37,6 +37,9 @@ const ORDER_UI_TO_API = {
 }
 const ORDER_API_TO_UI = Object.fromEntries(Object.entries(ORDER_UI_TO_API).map(([k, v]) => [v, k]))
 
+
+
+
 // tiny paginator for DRF endpoints (same behavior you use elsewhere)
 async function fetchAllPages(url, params = { page_size: 200 }) {
   const out = []
@@ -63,7 +66,8 @@ async function fetchAllPages(url, params = { page_size: 200 }) {
 export default function Search() {
   const navigate = useNavigate()
   const q = useQuery()
-
+  const auth = useAuth()
+  const isAuthed = !!auth?.isAuthed
   // sidebar catalogs
   const [brands, setBrands] = useState([])
   const [models, setModels] = useState([])
@@ -102,6 +106,17 @@ export default function Search() {
   const orderingUi = ORDER_API_TO_UI[orderingApi] ?? 'latest'
 
   // build API params (only allowed keys)
+  async function toggleFav(listingId, shouldFav) {
+    if (!isAuthed) return
+    try {
+      if (shouldFav) await api.post(endpoints.favorite(listingId))
+      else await api.delete(endpoints.favorite(listingId))
+      setItems(prev => prev.map(r => (r.id === listingId ? { ...r, is_favorited: shouldFav } : r)))
+    } catch (e) {
+      console.error('favorite toggle failed', e)
+    }
+  }
+
   const apiParams = useMemo(() => {
     const allowed = new Set([
       'category','brand','model','city','region',
@@ -518,6 +533,8 @@ export default function Search() {
                     location={location}
                     image={image}
                     id={item.id}
+                    isFavorited={!!item.is_favorited}
+                    onToggleFavorite={toggleFav}
                   />
                 )
               })}

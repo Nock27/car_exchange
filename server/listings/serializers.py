@@ -1,10 +1,10 @@
 from rest_framework import serializers
 from django.utils import timezone
 import re
-
+from django.db.utils import ProgrammingError, OperationalError
 from .models import (
     Brand, CarModel, Listing, ListingImage,
-    Category, FuelType, TransmissionType, BodyType, DriveType, Feature, Color
+    Category, FuelType, TransmissionType, BodyType, DriveType, Feature, Color, Favorite
 )
 
 # 17 chars, excludes I, O, Q
@@ -79,7 +79,8 @@ class ListingSerializer(serializers.ModelSerializer):
     
     color = serializers.PrimaryKeyRelatedField(queryset=Color.objects.all(), allow_null=True, required=False)
     color_detail = ColorSerializer(source="color", read_only=True)
-    
+    is_favorited = serializers.SerializerMethodField()
+
     # Read-only contact surfaced from the seller's profile
     seller_contact_email = serializers.SerializerMethodField(read_only=True)
     seller_contact_phone = serializers.SerializerMethodField(read_only=True)
@@ -102,13 +103,25 @@ class ListingSerializer(serializers.ModelSerializer):
             "features", "features_detail",
             "images",
             "seller_contact_email", "seller_contact_phone",
+            "is_favorited",
         ]
 
         read_only_fields = [
             "created_at", "updated_at", "expires_at",
             "seller_contact_email", "seller_contact_phone",
             "status", "is_active",
+            "is_favorited",
         ]
+
+
+    def get_is_favorited(self, obj):
+        request = self.context.get("request")
+        if not request or not getattr(request, "user", None) or not request.user.is_authenticated:
+            return False
+        try:
+            return Favorite.objects.filter(user=request.user, listing=obj).exists()
+        except Exception:
+            return False
 
     # ----- Field-level validation -----
     def validate_year(self, v):
@@ -202,5 +215,21 @@ class ListingSerializer(serializers.ModelSerializer):
         user = getattr(obj, "seller", None)
         profile = getattr(user, "profile", None) if user else None
         return getattr(profile, "phone_e164", "") if profile else ""
+    
+    def get_is_favorited(self, obj):
+        request = self.context.get("request")
+        if not request or not getattr(request, "user", None) or not request.user.is_authenticated:
+            return False
+        try:
+            return Favorite.objects.filter(user=request.user, listing=obj).exists()
+        except (ProgrammingError, OperationalError):
+            return False
 
 
+class FavoriteSerializer(serializers.ModelSerializer):
+    listing = ListingSerializer(read_only=True)
+
+    class Meta:
+        model = Favorite
+        fields = ["id", "listing", "created_at"]
+        read_only_fields = ["id", "listing", "created_at"]

@@ -9,8 +9,17 @@ export default function ListingCard({
   price = '€15,900',
   specs = 'Diesel • 180,000 km • Automatic',
   location = 'Sofia, Bulgaria',
+  isFavorited = false,
+  onToggleFavorite = () => {},
   onView = () => {},
 }) {
+  // --- ADD: favorite click handler (prevents navigation) ---
+  const handleFavClick = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (id != null) onToggleFavorite(id, !isFavorited)
+  }
+
   return (
     <Card className="p-4">
       <div className="grid grid-cols-[120px_1fr] gap-4">
@@ -28,7 +37,26 @@ export default function ListingCard({
             <h3 className="truncate text-base font-semibold text-neutral-900 dark:text-white">
               {title}
             </h3>
-            <div className="shrink-0 text-brand-600 dark:text-brand-400 font-semibold">{price}</div>
+
+            {/* --- CHANGE: wrap price + add heart button next to it --- */}
+            <div className="flex items-start gap-2">
+              <div className="flex items-start gap-2 shrink-0">
+                <div className="text-brand-600 dark:text-brand-400 font-semibold">{price}</div>
+                <button
+                  type="button"
+                  onClick={handleFavClick}
+                  title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                  aria-pressed={isFavorited}
+                  aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                  className={`text-xl leading-none select-none transition-opacity ${
+                    isFavorited ? 'opacity-100' : 'opacity-60 hover:opacity-90'
+                  }`}
+                >
+                  {isFavorited ? '❤' : '♡'}
+                </button>
+              </div>
+            </div>
+            {/* --- END CHANGE --- */}
           </div>
           <div className="mt-1 truncate text-sm text-neutral-600 dark:text-neutral-300">{specs}</div>
           <div className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">{location}</div>

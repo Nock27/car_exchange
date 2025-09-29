@@ -9,12 +9,12 @@ from .filters import ListingFilter
 
 from .models import (
     Brand, CarModel, Category, FuelType, TransmissionType, BodyType, DriveType,
-    Listing, ListingImage, FeatureGroup, Feature, Color
+    Listing, ListingImage, FeatureGroup, Feature, Color, Favorite
 )
 from .serializers import (
     BrandSerializer, CarModelSerializer,
     ListingSerializer, ListingImageSerializer, CategorySerializer, FuelTypeSerializer, TransmissionTypeSerializer,
-    BodyTypeSerializer, DriveTypeSerializer, FeatureSerializer, ColorSerializer,
+    BodyTypeSerializer, DriveTypeSerializer, FeatureSerializer, ColorSerializer, FavoriteSerializer,
 )
 
 
@@ -194,6 +194,19 @@ class ListingViewSet(viewsets.ModelViewSet):
 
         return Response({"results": data})
 
+    @action(detail=True, methods=["post", "delete", "get"], permission_classes=[permissions.IsAuthenticated])
+    def favorite(self, request, pk=None):
+        listing = self.get_object()
+        user = request.user
+        if request.method == "POST":
+            Favorite.objects.get_or_create(user=user, listing=listing)
+            return Response({"favorited": True}, status=status.HTTP_201_CREATED)
+        if request.method == "DELETE":
+            Favorite.objects.filter(user=user, listing=listing).delete()
+            return Response({"favorited": False}, status=status.HTTP_204_NO_CONTENT)
+        exists = Favorite.objects.filter(user=user, listing=listing).exists()
+        return Response({"favorited": exists})
+
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Category.objects.all().order_by("name")
@@ -235,3 +248,22 @@ class ColorViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Color.objects.all().order_by("name")
     serializer_class = ColorSerializer
     permission_classes = [permissions.AllowAny]
+
+class FavoriteViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = FavoriteSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return (
+            Favorite.objects.filter(user=self.request.user)
+            .select_related(
+                "listing",
+                "listing__brand",
+                "listing__model",
+                "listing__city",
+                "listing__fuel_type",
+                "listing__transmission",
+                "listing__body_type",
+            )
+            .prefetch_related("listing__images")
+        )

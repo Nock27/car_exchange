@@ -2,7 +2,7 @@ from django.contrib import admin, messages
 from .models import (
     Category, Brand, CarModel,
     FuelType, TransmissionType, BodyType, DriveType,
-    Listing, ListingImage, FeatureGroup, Feature, Color
+    Listing, ListingImage, FeatureGroup, Feature, Color, Favorite
 )
 
 @admin.register(Brand)
@@ -83,3 +83,9 @@ class FeatureAdmin(admin.ModelAdmin):
     list_display = ("id", "group", "name")
     list_filter = ("group",)
     search_fields = ("name",)
+
+@admin.register(Favorite)
+class FavoriteAdmin(admin.ModelAdmin):
+    list_display = ("user", "listing", "created_at")
+    search_fields = ("user__username", "listing__title", "listing__id")
+    autocomplete_fields = ("user", "listing")

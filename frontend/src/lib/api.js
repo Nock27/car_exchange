@@ -37,6 +37,8 @@ export const endpoints = {
   listingsMap: `${apiPrefix}/listings/map/`,
   listing: (id) => `${apiPrefix}/listings/${id}/`,
   features: `${apiPrefix}/features/`,
+  favorite: (id) => `${apiPrefix}/listings/${id}/favorite/`,
+  favorites: `${apiPrefix}/favorites/`,
 }
 
 // ---- Helper: normalize DRF list responses to plain arrays ----
