@@ -95,6 +95,26 @@ export default function CreateListing() {
   const intOrNull  = (v) => (v === '' || v == null ? null : Number(v))
   const strOrEmpty = (v) => (v == null ? '' : String(v))
 
+  const geoPayload = (form) => {
+    const address = (form.address ?? '').trim();
+    const hasLat = form.latitude !== '' && form.latitude != null;
+    const hasLng = form.longitude !== '' && form.longitude != null;
+
+    if (hasLat && hasLng) {
+      const lat = Number(form.latitude);
+      const lng = Number(form.longitude);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        return {
+          address: address || null,
+          latitude: Number(lat.toFixed(6)),
+          longitude: Number(lng.toFixed(6)),
+        };
+      }
+    }
+    // No valid coords → send only address, omit lat/lng entirely
+    return { address: address || null };
+  };
+
   // list the required fields in the project
   const REQUIRED = [
     'title',
@@ -525,9 +545,7 @@ useEffect(() => {
         euro_standard: strOrEmpty(form.euro_standard),
         vin:           form.vin ? String(form.vin).toUpperCase() : null,
         video_url:     strOrEmpty(form.video_url),
-        address:       strOrEmpty(form.address),
-        latitude:      form.latitude  === '' || form.latitude  == null ? null : Number(form.latitude),
-        longitude:     form.longitude === '' || form.longitude == null ? null : Number(form.longitude),
+        ...geoPayload(form),
         features:      Array.from(selectedFeatureIds ?? []),
       }
 
