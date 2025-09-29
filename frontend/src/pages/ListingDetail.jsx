@@ -118,6 +118,10 @@ export default function ListingDetail() {
     return list
   }, [listing])
 
+  const featureNames = Array.isArray(listing?.features_detail)
+  ? listing.features_detail.map(f => f?.name || f?.label).filter(Boolean)
+  : []
+
   const [activeIdx, setActiveIdx] = useState(0)
 
   const auth = useAuth()
@@ -502,6 +506,20 @@ export default function ListingDetail() {
               </div>
             )}
           </Card>
+          {/* Extras / Features */}
+          {featureNames.length > 0 && (
+            <Card className="lg:col-span-2">
+              <h3 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">Extras</h3>
+              <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3">
+                {featureNames.map((name, i) => (
+                  <li key={`${name}-${i}`} className="flex items-center gap-2 text-sm text-neutral-800 dark:text-neutral-100">
+                    <span aria-hidden className="inline-block">✓</span>
+                    <span>{name}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
 
           {/* Description */}
           <Card className="lg:col-span-2">

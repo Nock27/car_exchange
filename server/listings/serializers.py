@@ -110,7 +110,7 @@ class ListingSerializer(serializers.ModelSerializer):
             "created_at", "updated_at", "expires_at",
             "seller_contact_email", "seller_contact_phone",
             "status", "is_active",
-            "is_favorited",
+            "is_favorited", "features_detail",
         ]
 
 
