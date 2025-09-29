@@ -85,6 +85,32 @@ export default function CreateListing() {
   const [featureIdByKey, setFeatureIdByKey] = useState({});
   const [loadingFeatures, setLoadingFeatures] = useState(true);
 
+  // Error handling
+  const [errors, setErrors] = useState({}) 
+  const [touched, setTouched] = useState({})
+
+  const markTouched = (k) => setTouched(t => ({ ...t, [k]: true }))
+
+  const idOrNull   = (v) => (v === '' || v == null ? null : Number(v))
+  const intOrNull  = (v) => (v === '' || v == null ? null : Number(v))
+  const strOrEmpty = (v) => (v == null ? '' : String(v))
+
+  // list the required fields in the project
+  const REQUIRED = [
+    'title',
+    'price',
+    'year',
+    'category',
+    'brand',
+    'model',
+    'city',
+    'fuel_type',
+    'transmission',
+    'body_type',
+    'drive_type',
+    'engine_cc',
+    'power_hp',
+  ]
 
   // form
   const [form, setForm] = useState({
@@ -156,6 +182,40 @@ export default function CreateListing() {
       return copy;
     });
   }
+
+  function validateCreateForm(f) {
+    const e = {}
+    const isEmpty = (v) => v == null || String(v).trim() === ''
+    for (const k of REQUIRED) {
+      if (isEmpty(f[k])) e[k] = 'This field is required.'
+    }
+    // numeric sanity (frontend hints; backend still the source of truth)
+    if (f.price && !/^\d+(\.\d+)?$/.test(String(f.price))) e.price = 'Enter a valid number.'
+    if (f.year && !/^\d+$/.test(String(f.year))) e.year = 'Enter a valid year.'
+    if (f.engine_cc && Number(f.engine_cc) <= 0) e.engine_cc = 'Must be greater than 0.'
+    if (f.power_hp && Number(f.power_hp) <= 0) e.power_hp = 'Must be greater than 0.'
+    return e
+  }
+
+  function normalizeServerErrorsToFields(data) {
+    const map = {}
+    if (data && typeof data === 'object') {
+      for (const [k, v] of Object.entries(data)) {
+        if (Array.isArray(v)) map[k] = v.join(' ')
+        else if (typeof v === 'string') map[k] = v
+        else if (v && typeof v === 'object') {
+          // nested errors (rare) -> flatten
+          for (const [kk, vv] of Object.entries(v)) {
+            map[`${k}.${kk}`] = Array.isArray(vv) ? vv.join(' ') : String(vv)
+          }
+        }
+      }
+    }
+    return map
+  }
+
+  const hasError = (k) => !!errors[k] && (touched[k] || Object.keys(touched).length === 0)
+  const reqMark = <span className="ml-1 text-red-500">*</span>
 
 // cleanup blob urls on unmount
 useEffect(() => {
@@ -381,15 +441,9 @@ useEffect(() => {
     e.target.value = '';  // let user pick the same files again later
   };
 
-  const canSubmit = useMemo(() => {
-    const needed = [
-      'title','price','year','mileage','category','brand','model',
-      'fuel_type','transmission','body_type','drive_type',
-      'engine_cc','power_hp','color','euro_standard',
-      'region','city','address','latitude','longitude'
-    ]
-    return needed.every(k => !!form[k])
-  }, [form])
+  const canSubmit = useMemo(() => (
+    REQUIRED.every(k => !!form[k])
+  ), [form])
 
   const validateForm = () => {
   const errors = []
@@ -425,69 +479,76 @@ useEffect(() => {
   }
 
   const submit = async (e) => {
-  e.preventDefault()
-  
-  const errs = validateForm(form);
-  if (errs.length) {
-    alert(errs.join('\n'));
-    return;
-  }
-  setError(null)
+    e.preventDefault()
+    
+    setError(null)
+    const fieldErrors = validateCreateForm(form)
+    if (Object.keys(fieldErrors).length > 0) {
+      setErrors(fieldErrors)
+      // mark all errored fields as touched so messages show
+      setTouched(t => ({ ...t, ...Object.fromEntries(Object.keys(fieldErrors).map(k => [k, true])) }))
+      // scroll to the first invalid field
+      const firstKey = Object.keys(fieldErrors)[0]
+      const el = document.getElementById(firstKey)
+      if (el?.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
+    setErrors({})
 
 
-  if (!isAuthed) return setError('You must be logged in to post a listing.')
-  if (!canSubmit) return setError('Please fill in all required fields.')
-  if (form.video_url && !YT_VIMEO_RE.test(form.video_url)) {
-    return setError('Video URL must be a valid YouTube or Vimeo link.')
-  }
+    if (!isAuthed) return setError('You must be logged in to post a listing.')
+    if (!canSubmit) return setError('Please fill in all required fields.')
+    if (form.video_url && !YT_VIMEO_RE.test(form.video_url)) {
+      return setError('Video URL must be a valid YouTube or Vimeo link.')
+    }
 
-  try {
-    setSubmitting(true)
+    try {
+      setSubmitting(true)
 
-    const payload = {
-      title: (form.title || '').trim(),
-      description: (form.description || '').trim(),
-      price: String(form.price ?? ''),
-      year: Number(form.year),
-      mileage: Number(form.mileage ?? 0),
-      category: Number(form.category),
-      brand: Number(form.brand),
-      model: Number(form.model),
-      city: Number(form.city),
-      fuel_type: Number(form.fuel_type),
-      transmission: Number(form.transmission),
-      body_type: Number(form.body_type),
-      drive_type: Number(form.drive_type),
-      engine_cc: Number(form.engine_cc ?? 0),
-      power_hp: Number(form.power_hp ?? 0),
-      color: form.color ? Number(form.color) : null,
-      euro_standard: form.euro_standard || '',
-      vin: form.vin || null,
-      video_url: form.video_url || '',
-      address: form.address || '',
-      latitude: form.latitude != null ? Number(form.latitude).toFixed(6) : null,
-      longitude: form.longitude != null ? Number(form.longitude).toFixed(6) : null,
-      features: Array.from(selectedFeatureIds ?? []),
-}
-
-
-
-    // 2) Create the listing with ONE request (remove tryPayloads entirely)
-    const { data: created } = await api.post(`${endpoints.listings}/`, payload)
-
-    // 3) Upload images 
-    if (images.length) {
-      for (let i = 0; i < images.length; i++) {
-        const fd = new FormData();
-        fd.append('image', images[i].file);
-        fd.append('order', String(i)); // optional
-
-        await api.post(
-          `${endpoints.listings}/${created.id}/upload_image/`,
-          fd,
-          { headers: { 'Content-Type': 'multipart/form-data' } }
-        );
+      const payload = {
+        title:        strOrEmpty(form.title).trim(),
+        description:  strOrEmpty(form.description).trim(),
+        price:        intOrNull(form.price),      // number (not string)
+        year:         intOrNull(form.year),
+        mileage:      intOrNull(form.mileage),
+        category:     idOrNull(form.category),
+        brand:        idOrNull(form.brand),
+        model:        idOrNull(form.model),
+        city:         idOrNull(form.city),
+        fuel_type:    idOrNull(form.fuel_type),
+        transmission: idOrNull(form.transmission),
+        body_type:    idOrNull(form.body_type),
+        drive_type:   idOrNull(form.drive_type),
+        engine_cc:    intOrNull(form.engine_cc),
+        power_hp:     intOrNull(form.power_hp),
+        color:        idOrNull(form.color),
+        euro_standard: strOrEmpty(form.euro_standard),
+        vin:           form.vin ? String(form.vin).toUpperCase() : null,
+        video_url:     strOrEmpty(form.video_url),
+        address:       strOrEmpty(form.address),
+        latitude:      form.latitude  === '' || form.latitude  == null ? null : Number(form.latitude),
+        longitude:     form.longitude === '' || form.longitude == null ? null : Number(form.longitude),
+        features:      Array.from(selectedFeatureIds ?? []),
       }
+
+
+
+      // 2) Create the listing with ONE request (remove tryPayloads entirely)
+      const { data: created } = await api.post(`${endpoints.listings}/`, payload)
+
+      // 3) Upload images 
+      if (images.length) {
+        for (let i = 0; i < images.length; i++) {
+          const fd = new FormData();
+          fd.append('image', images[i].file);
+          fd.append('order', String(i)); // optional
+
+          await api.post(
+            `${endpoints.listings}/${created.id}/upload_image/`,
+            fd,
+            { headers: { 'Content-Type': 'multipart/form-data' } }
+          );
+        }
 }
 
 
@@ -495,7 +556,17 @@ useEffect(() => {
   } catch (err) {
     console.error(err)
     const d = err?.response?.data;
-    setError(formatApiErrors(d) || 'Something went wrong');
+    const fieldMap = normalizeServerErrorsToFields(d)
+    if (Object.keys(fieldMap).length) {
+      setErrors(fieldMap)
+      setTouched(t => ({ ...t, ...Object.fromEntries(Object.keys(fieldMap).map(k => [k, true])) }))
+      const firstKey = Object.keys(fieldMap)[0]
+      const el = document.getElementById(firstKey)
+      if (el?.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    } else {
+      setError(formatApiErrors(d) || 'Something went wrong')
+    }
+
   } finally {
     setSubmitting(false)
   }
@@ -514,28 +585,78 @@ useEffect(() => {
     <Container className="py-8">
       <h2 className="mb-4 text-2xl font-semibold">Post a new listing</h2>
 
+      {Object.keys(errors).length > 0 && (
+        <div className="mb-4 rounded-md border border-red-300 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/60 dark:text-red-300">
+          <div className="mb-2 font-semibold">Please fix the highlighted fields:</div>
+          <ul className="list-disc pl-5 space-y-1">
+            {Object.entries(errors).map(([k, msg]) => (
+              <li key={k}>
+                <span className="font-medium capitalize">{k.replace(/_/g, ' ')}</span>: {msg}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <form onSubmit={submit} className="grid gap-6">
         <Card className="p-4">
           <h3 className="mb-3 text-lg font-semibold">Basic info</h3>
           <div className="grid gap-3 md:grid-cols-2">
             <div className="md:col-span-2">
-              <label className="mb-1 block text-sm font-medium">Title *</label>
-              <Input value={form.title} onChange={(e)=>setForm(s=>({...s,title:e.target.value}))} placeholder="e.g., 2017 BMW 320d xDrive" />
+              <label className="mb-1 block text-sm font-medium">
+                Title {REQUIRED.includes('title') && reqMark}
+              </label>
+              <Input
+                id="title"
+                value={form.title}
+                onChange={(e) => { setForm(s => ({ ...s, title: e.target.value })); markTouched('title'); }}
+                onBlur={() => markTouched('title')}
+                placeholder="e.g., 2017 BMW 320d xDrive"
+                className={hasError('title') ? 'border-red-500 ring-2 ring-red-300' : ''}
+              />
+              {hasError('title') && <p className="mt-1 text-xs text-red-600">{errors.title}</p>}
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium">Price (лв) *</label>
-              <Input inputMode="numeric" value={form.price} onChange={onChangeNumber('price')} placeholder="e.g., 17900" />
+              <label className="mb-1 block text-sm font-medium" htmlFor="price">Price (eur) {reqMark}</label>
+              <Input
+                id="price"
+                inputMode="numeric"
+                value={form.price}
+                onChange={(e) => { onChangeNumber('price')(e); markTouched('price'); }}
+                onBlur={() => markTouched('price')}
+                placeholder="e.g., 17900"
+                className={hasError('price') ? 'border-red-500 ring-2 ring-red-300' : ''}
+              />
+              {hasError('price') && <p className="mt-1 text-xs text-red-600">{errors.price}</p>}
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium">Mileage (km) *</label>
-              <Input inputMode="numeric" value={form.mileage} onChange={onChangeNumber('mileage')} placeholder="e.g., 145000" />
+              <label className="mb-1 block text-sm font-medium" htmlFor="mileage">Mileage (km){REQUIRED.includes('mileage') ? reqMark : null}</label>
+              <Input
+                id="mileage"
+                inputMode="numeric"
+                value={form.mileage}
+                onChange={(e) => { onChangeNumber('mileage')(e); markTouched('mileage'); }}
+                onBlur={() => markTouched('mileage')}
+                placeholder="e.g., 145000"
+                className={hasError('mileage') ? 'border-red-500 ring-2 ring-red-300' : ''}
+              />
+              {hasError('mileage') && <p className="mt-1 text-xs text-red-600">{errors.mileage}</p>}
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium">Production year *</label>
-              <Input inputMode="numeric" value={form.year} onChange={onChangeNumber('year')} placeholder="e.g., 2017" />
+              <label className="mb-1 block text-sm font-medium" htmlFor="year">Production year {reqMark}</label>
+              <Input
+                id="year"
+                inputMode="numeric"
+                value={form.year}
+                onChange={(e) => { onChangeNumber('year')(e); markTouched('year'); }}
+                onBlur={() => markTouched('year')}
+                placeholder="e.g., 2017"
+                className={hasError('year') ? 'border-red-500 ring-2 ring-red-300' : ''}
+              />
+              {hasError('year') && <p className="mt-1 text-xs text-red-600">{errors.year}</p>}
             </div>
 
             <div>
@@ -547,13 +668,35 @@ useEffect(() => {
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium">Engine (cc) *</label>
-              <Input inputMode="numeric" value={form.engine_cc} onChange={onChangeNumber('engine_cc')} placeholder="e.g., 1995" />
+              <label className="mb-1 block text-sm font-medium" htmlFor="engine_cc">
+                Engine (cc) {REQUIRED.includes('engine_cc') && reqMark}
+              </label>
+              <Input
+                id="engine_cc"
+                inputMode="numeric"
+                value={form.engine_cc}
+                onChange={(e) => { onChangeNumber('engine_cc')(e); markTouched('engine_cc'); }}
+                onBlur={() => markTouched('engine_cc')}
+                placeholder="e.g., 1995"
+                className={hasError('engine_cc') ? 'border-red-500 ring-2 ring-red-300' : ''}
+              />
+              {hasError('engine_cc') && <p className="mt-1 text-xs text-red-600">{errors.engine_cc}</p>}
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium">Power (HP) *</label>
-              <Input inputMode="numeric" value={form.power_hp} onChange={onChangeNumber('power_hp')} placeholder="e.g., 190" />
+              <label className="mb-1 block text-sm font-medium" htmlFor="power_hp">
+                Power (HP) {REQUIRED.includes('power_hp') && reqMark}
+              </label>
+              <Input
+                id="power_hp"
+                inputMode="numeric"
+                value={form.power_hp}
+                onChange={(e) => { onChangeNumber('power_hp')(e); markTouched('power_hp'); }}
+                onBlur={() => markTouched('power_hp')}
+                placeholder="e.g., 190"
+                className={hasError('power_hp') ? 'border-red-500 ring-2 ring-red-300' : ''}
+              />
+              {hasError('power_hp') && <p className="mt-1 text-xs text-red-600">{errors.power_hp}</p>}
             </div>
 
             <div className="md:col-span-2">
@@ -573,59 +716,106 @@ useEffect(() => {
           <h3 className="mb-3 text-lg font-semibold">Classification</h3>
           <div className="grid gap-3 md:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm font-medium">Category *</label>
-              <Select value={form.category} onChange={onSelect('category')}>
+              <label className="mb-1 block text-sm font-medium" htmlFor="category">Category {reqMark}</label>
+              <Select
+                id="category"
+                value={form.category}
+                onChange={(e) => { onSelect('category')(e); markTouched('category'); }}
+                onBlur={() => markTouched('category')}
+                className={hasError('category') ? 'border-red-500 ring-2 ring-red-300' : ''}>
                 <option value="">Select</option>
                 {categoriesArr.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
               </Select>
+              {hasError('category') && <p className="mt-1 text-xs text-red-600">{errors.category}</p>}
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium">Brand *</label>
-              <Select value={form.brand} onChange={onSelect('brand')}>
+              <label className="mb-1 block text-sm font-medium" htmlFor="brand">Brand {reqMark}</label>
+              <Select
+                id="brand"
+                value={form.brand}
+                onChange={(e) => { onSelect('brand')(e); markTouched('brand'); }}
+                onBlur={() => markTouched('brand')}
+                className={hasError('brand') ? 'border-red-500 ring-2 ring-red-300' : ''}>
                 <option value="">Select</option>
                 {brandsArr.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
               </Select>
+              {hasError('brand') && <p className="mt-1 text-xs text-red-600">{errors.brand}</p>}
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium">Model *</label>
-              <Select value={form.model} onChange={onSelect('model')} disabled={!form.brand}>
+              <label className="mb-1 block text-sm font-medium" htmlFor="model">Model {reqMark}</label>
+              <Select
+                id="model"
+                value={form.model}
+                onChange={(e) => { onSelect('model')(e); markTouched('model'); }}
+                onBlur={() => markTouched('model')}
+                disabled={!form.brand}
+                className={hasError('model') ? 'border-red-500 ring-2 ring-red-300' : ''}>
                 <option value="">Select</option>
                 {modelsArr.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
               </Select>
+              {hasError('model') && <p className="mt-1 text-xs text-red-600">{errors.model}</p>}
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium">Fuel type *</label>
-              <Select value={form.fuel_type} onChange={onSelect('fuel_type')}>
+              <label className="mb-1 block text-sm font-medium" htmlFor="fuel_type">Fuel type {reqMark}</label>
+              <Select
+                id="fuel_type"
+                value={form.fuel_type}
+                onChange={(e) => { onSelect('fuel_type')(e); markTouched('fuel_type'); }}
+                onBlur={() => markTouched('fuel_type')}
+                className={hasError('fuel_type') ? 'border-red-500 ring-2 ring-red-300' : ''}>
                 <option value="">Select</option>
                 {fuelArr.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
               </Select>
+              {hasError('fuel_type') && <p className="mt-1 text-xs text-red-600">{errors.fuel_type}</p>}
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium">Gearbox *</label>
-              <Select value={form.transmission} onChange={onSelect('transmission')}>
+              <label className="mb-1 block text-sm font-medium" htmlFor="transmission">Gearbox {reqMark}</label>
+              <Select
+                id="transmission"
+                value={form.transmission}
+                onChange={(e) => { onSelect('transmission')(e); markTouched('transmission'); }}
+                onBlur={() => markTouched('transmission')}
+                className={hasError('transmission') ? 'border-red-500 ring-2 ring-red-300' : ''}>
                 <option value="">Select</option>
                 {transArr.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
               </Select>
+              {hasError('transmission') && <p className="mt-1 text-xs text-red-600">{errors.transmission}</p>}
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium">Body type *</label>
-              <Select value={form.body_type} onChange={onSelect('body_type')}>
+              <label className="mb-1 block text-sm font-medium" htmlFor="body_type">
+                Body type {REQUIRED.includes('body_type') && reqMark}
+              </label>
+              <Select
+                id="body_type"
+                value={form.body_type}
+                onChange={(e) => { onSelect('body_type')(e); markTouched('body_type'); }}
+                onBlur={() => markTouched('body_type')}
+                className={hasError('body_type') ? 'border-red-500 ring-2 ring-red-300' : ''}>
                 <option value="">Select</option>
                 {bodyArr.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
               </Select>
+              {hasError('body_type') && <p className="mt-1 text-xs text-red-600">{errors.body_type}</p>}
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium">Drive type *</label>
-              <Select value={form.drive_type} onChange={onSelect('drive_type')}>
+              <label className="mb-1 block text-sm font-medium" htmlFor="drive_type">
+                Drive type {reqMark}
+              </label>
+              <Select
+                id="drive_type"
+                value={form.drive_type}
+                onChange={(e) => { onSelect('drive_type')(e); markTouched('drive_type'); }}
+                onBlur={() => markTouched('drive_type')}
+                className={hasError('drive_type') ? 'border-red-500 ring-2 ring-red-300' : ''}>
                 <option value="">Select</option>
                 {driveArr.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
               </Select>
+              {hasError('drive_type') && <p className="mt-1 text-xs text-red-600">{errors.drive_type}</p>}
             </div>
 
             <div>
@@ -649,19 +839,32 @@ useEffect(() => {
           <h3 className="mb-3 text-lg font-semibold">Location</h3>
           <div className="grid gap-3 md:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm font-medium">Region *</label>
-              <Select value={form.region} onChange={onSelect('region')}>
+              <label className="mb-1 block text-sm font-medium" htmlFor="region">Region {reqMark}</label>
+              <Select
+                id="region"
+                value={form.region}
+                onChange={(e) => { onSelect('region')(e); markTouched('region'); }}
+                onBlur={() => markTouched('region')}
+                className={hasError('region') ? 'border-red-500 ring-2 ring-red-300' : ''}>
                 <option value="">Select</option>
                 {regionsArr.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
               </Select>
+              {hasError('region') && <p className="mt-1 text-xs text-red-600">{errors.region}</p>}
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium">City *</label>
-              <Select value={form.city} onChange={onSelect('city')} disabled={!form.region}>
+              <label className="mb-1 block text-sm font-medium" htmlFor="city">City {reqMark}</label>
+              <Select
+                id="city"
+                value={form.city}
+                onChange={(e) => { onSelect('city')(e); markTouched('city'); }}
+                onBlur={() => markTouched('city')}
+                disabled={!form.region}
+                className={hasError('city') ? 'border-red-500 ring-2 ring-red-300' : ''}>
                 <option value="">Select</option>
                 {citiesArr.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </Select>
+              {hasError('city') && <p className="mt-1 text-xs text-red-600">{errors.city}</p>}
             </div>
 
             <div className="md:col-span-2">
@@ -807,7 +1010,7 @@ useEffect(() => {
         )}
 
         <div className="flex items-center gap-3">
-          <Button type="submit" disabled={submitting || loading || !canSubmit}>
+          <Button type="submit" disabled={submitting || loading}>
             {submitting ? 'Publishing…' : 'Publish listing'}
           </Button>
           <Button type="button" variant="secondary" onClick={() => navigate(-1)}>Cancel</Button>

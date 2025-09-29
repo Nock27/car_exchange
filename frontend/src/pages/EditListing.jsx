@@ -370,7 +370,7 @@ export default function EditListing() {
       const url = `${endpoints.listings}/${id}/`
       const payload = {
         title:        form.title || null,
-        description:  form.description || null,
+        description:  (form.description ?? ''),
         category:     idOrNull(form.category),
         brand:        idOrNull(form.brand),
         model:        idOrNull(form.model),
