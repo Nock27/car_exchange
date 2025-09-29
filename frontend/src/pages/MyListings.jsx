@@ -42,15 +42,15 @@ export default function MyListings() {
     try {
       let res
       if (typeof urlOrParams === 'string') {
+        // urlOrParams is a "next" or "previous" URL returned by DRF (already includes page)
         res = await api.get(urlOrParams)
       } else {
-        // Assumes backend supports ?mine=1 to filter owner’s listings.
-        // If not, change to whatever your “my listings” endpoint is.
-        res = await api.get(endpoints.listings, {
-          params: { mine: 1, ordering: orderingApi, page_size: 24, ...urlOrParams }
+        // first load / sorting changes: hit /listings/mine/ with params
+        res = await api.get(endpoints.listingsMine, {
+          params: { ordering: orderingApi, page_size: 12, ...urlOrParams }
         })
       }
-      const { data } = await api.get(endpoints.listingsMine, { params: { page_size: 200, ordering: '-created_at' } })
+      const { data } = res
       const results = Array.isArray(data) ? data : (data.results || [])
       setItems(results)
       setCount(data.count || (Array.isArray(data) ? data.length : 0))
