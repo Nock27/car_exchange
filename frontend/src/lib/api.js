@@ -34,6 +34,7 @@ export const endpoints = {
   cities: `${apiPrefix}/cities/`,
   colors: `${apiPrefix}/colors/`,
   listings: `${apiPrefix}/listings`,
+  listingsMine: `${apiPrefix}/listings/mine/`,
   listingsMap: `${apiPrefix}/listings/map/`,
   listing: (id) => `${apiPrefix}/listings/${id}/`,
   features: `${apiPrefix}/features/`,

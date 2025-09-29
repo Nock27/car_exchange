@@ -206,6 +206,16 @@ class ListingViewSet(viewsets.ModelViewSet):
             return Response({"favorited": False}, status=status.HTTP_204_NO_CONTENT)
         exists = Favorite.objects.filter(user=user, listing=listing).exists()
         return Response({"favorited": exists})
+    
+    @action(detail=False, methods=["get"], permission_classes=[permissions.IsAuthenticated])
+    def mine(self, request):
+        qs = self.get_queryset().filter(seller=request.user)
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            ser = self.get_serializer(page, many=True)
+            return self.get_paginated_response(ser.data)
+        ser = self.get_serializer(qs, many=True)
+        return Response(ser.data)
 
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
