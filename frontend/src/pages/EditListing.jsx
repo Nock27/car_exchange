@@ -8,6 +8,8 @@ import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import { PhotosEditor } from '@/components/listings/PhotosEditor'
 import { api, endpoints } from '@/lib/api'
+import MapPicker from '@/components/MapPicker'
+import AddressAutocomplete from '@/components/AddressAutocomplete'
 
 export default function EditListing() {
   const { id } = useParams()
@@ -55,6 +57,9 @@ export default function EditListing() {
     region: '',
     city: '',
     video_url: '',
+    address: '',
+    latitude: '',
+    longitude: '',
   })
   const handle = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
 
@@ -129,6 +134,25 @@ export default function EditListing() {
       prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     )
   }
+  const geoPayload = (form) => {
+    const address = (form.address ?? '').trim();
+    const hasLat = form.latitude !== '' && form.latitude != null;
+    const hasLng = form.longitude !== '' && form.longitude != null;
+
+    if (hasLat && hasLng) {
+      const lat = Number(form.latitude);
+      const lng = Number(form.longitude);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        return {
+          address: address || null,
+          latitude: Number(lat.toFixed(6)),
+          longitude: Number(lng.toFixed(6)),
+        };
+      }
+    }
+    // No valid coords → send only address, omit lat/lng
+    return { address: address || null };
+  };
 
   const years = useMemo(
     () => Array.from({ length: new Date().getFullYear() - 1929 }, (_, i) => 1930 + i).reverse(),
@@ -225,6 +249,9 @@ export default function EditListing() {
           region: regionId,
           city: cityId,
           video_url: data.video_url || '',
+          address: data.address || '',
+          latitude:  (data.latitude  ?? '') === null ? '' : String(data.latitude  ?? ''),
+          longitude: (data.longitude ?? '') === null ? '' : String(data.longitude ?? ''),
         })
 
         // Fallback names for immediate display
@@ -296,6 +323,38 @@ export default function EditListing() {
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.brand])
+
+  // helpers to locate selected region/city objects for autocomplete context
+  const regionsArr = Array.isArray(regions) ? regions : []
+  const citiesArr  = Array.isArray(cities)  ? cities  : []
+  const selectedRegion = regionsArr.find(r => String(r.id) === String(form.region)) || null
+  const selectedCity   = citiesArr.find(c => String(c.id) === String(form.city)) || null
+
+  // prefer city center if available
+  const mapCenter = useMemo(() => {
+    const lat = selectedCity?.lat ?? selectedCity?.latitude
+    const lng = selectedCity?.lng ?? selectedCity?.longitude
+    if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat: Number(lat), lng: Number(lng) }
+    if (typeof lat === 'string' && typeof lng === 'string' && lat && lng) {
+      return { lat: parseFloat(lat), lng: parseFloat(lng) }
+    }
+    return null
+  }, [selectedCity])
+
+  // current marker value for MapPicker
+  const mapValue = useMemo(() => ({
+    address: form.address,
+    latitude: form.latitude,
+    longitude: form.longitude,
+  }), [form.address, form.latitude, form.longitude])
+
+  // handlers for map/autocomplete
+  const onPickAddress = ({ address, latitude, longitude }) => {
+    setForm(prev => ({ ...prev, address, latitude, longitude }))
+  }
+  const onAutoSelect = ({ address, latitude, longitude }) => {
+    setForm(prev => ({ ...prev, address, latitude, longitude }))
+  }
 
   /* -------------------- region → cities -------------------- */
   useEffect(() => {
@@ -387,6 +446,7 @@ export default function EditListing() {
         region:       idOrNull(form.region),
         city:         idOrNull(form.city),
         features:     selectedFeatures,
+        ...geoPayload(form),
       }
       const video = String(form.video_url || '').trim()
       if (video !== '') payload.video_url = video // omit entirely if empty
@@ -544,7 +604,6 @@ export default function EditListing() {
                 <label htmlFor="region" className={labelTextCls}>Region</label>
                 <Select id="region" value={form.region} onChange={e => handle('region', e.target.value)}>
                   <option value="">Select region…</option>
-                  {/* fallback option so the saved value shows even if regions not loaded yet */}
                   {form.region && !regions.some(r => String(r.id) === String(form.region)) && (
                     <option value={form.region}>
                       {prefillNames.region || `Selected region (#${form.region})`}
@@ -558,7 +617,6 @@ export default function EditListing() {
                 <label htmlFor="city" className={labelTextCls}>City</label>
                 <Select id="city" value={form.city} onChange={e => handle('city', e.target.value)} disabled={!form.region}>
                   <option value="">{form.region ? 'Select city…' : 'Choose region first'}</option>
-                  {/* fallback option so the saved value shows even if cities not loaded yet */}
                   {form.city && !cities.some(c => String(c.id) === String(form.city)) && (
                     <option value={form.city}>
                       {prefillNames.city || `Selected city (#${form.city})`}
@@ -568,11 +626,35 @@ export default function EditListing() {
                 </Select>
               </div>
 
+              {/* Address autocomplete */}
+              <div className="md:col-span-2">
+                <label htmlFor="address" className={labelTextCls}>Address</label>
+                <AddressAutocomplete
+                  value={form.address}
+                  cityObj={selectedCity}
+                  regionObj={selectedRegion}
+                  onChangeText={(txt) => setForm(s => ({ ...s, address: txt }))}
+                  onSelect={onAutoSelect}
+                />
+              </div>
+
+              {/* Map picker */}
+              <div className="md:col-span-2">
+                <MapPicker
+                  value={mapValue}
+                  center={mapCenter}
+                  zoom={mapCenter ? 12 : undefined}
+                  focusOnChangeZoom={17}
+                  onChange={onPickAddress}
+                />
+              </div>
+
               <div className={fieldStackCls + ' md:col-span-2'}>
                 <label htmlFor="video_url" className={labelTextCls}>YouTube/Vimeo URL (optional)</label>
                 <Input id="video_url" placeholder="https://youtube.com/… or https://vimeo.com/…" value={form.video_url} onChange={e => handle('video_url', e.target.value)} />
               </div>
             </div>
+
           </Card>
 
           <PhotosEditor
