@@ -29,7 +29,8 @@ export default function EditListing() {
   const [cities, setCities] = useState([])
   const [colors, setColors] = useState([])
   const [images, setImages] = useState([])
-
+  const [features, setFeatures] = useState([])
+  const [selectedFeatures, setSelectedFeatures] = useState([])
 
   // fallback labels for selected region/city (if options not loaded yet)
   const [prefillNames, setPrefillNames] = useState({ region: '', city: '' })
@@ -92,6 +93,26 @@ export default function EditListing() {
     return parseArray(data)
   }
 
+  async function fetchAllPages(url, params = {}) {
+    const out = []
+    let nextUrl = url
+    let nextParams = { ...params }
+    while (nextUrl) {
+      const { data } = await api.get(nextUrl, { params: nextParams })
+      const chunk = Array.isArray(data) ? data : (data?.results || [])
+      out.push(...chunk)
+      const base = api?.defaults?.baseURL || ''
+      const next = data?.next || null
+      if (next) {
+        nextUrl = next.startsWith(base) ? next.slice(base.length) : next
+        nextParams = {} // DRF next already encodes paging
+      } else {
+        nextUrl = null
+      }
+    }
+    return out
+  }
+
   const labelOf = (x) => x?.name ?? x?.title ?? x?.label ?? `#${x?.id}`
 
   const toIntString = (val) => {
@@ -103,6 +124,11 @@ export default function EditListing() {
   }
   const idOrNull = (v) => (v === '' || v == null ? null : parseInt(v, 10))
   const intOrNull = (v) => (v === '' || v == null ? null : parseInt(v, 10))
+  const toggleFeature = (id) => {
+    setSelectedFeatures(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    )
+  }
 
   const years = useMemo(
     () => Array.from({ length: new Date().getFullYear() - 1929 }, (_, i) => 1930 + i).reverse(),
@@ -209,6 +235,18 @@ export default function EditListing() {
 
         setImages(Array.isArray(data.images) ? data.images : [])
 
+        if (Array.isArray(data.features)) {
+          setSelectedFeatures(data.features.map(n => Number(n)).filter(Number.isFinite))
+        } else if (Array.isArray(data.features_detail)) {
+          setSelectedFeatures(
+            data.features_detail
+              .map(f => Number(f?.id))
+              .filter(Number.isFinite)
+          )
+        } else {
+          setSelectedFeatures([])
+}
+
         // Warm dependent lists so the selected IDs appear in options
         if (brandId) {
           try {
@@ -280,6 +318,21 @@ export default function EditListing() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.region])
 
+  // load all available features (extras)
+  useEffect(() => {
+    let alive = true
+    ;(async () => {
+      try {
+        const rows = await fetchAllPages(endpoints.features, { page_size: 200 })
+        if (alive) setFeatures(rows)
+      } catch (e) {
+        console.error('Failed to load features', e)
+        if (alive) setFeatures([])
+      }
+    })()
+    return () => { alive = false }
+  }, [])
+
   /* -------------------- validation -------------------- */
   const validateForm = (f) => {
     const errs = []
@@ -333,6 +386,7 @@ export default function EditListing() {
         color:        idOrNull(form.color),
         region:       idOrNull(form.region),
         city:         idOrNull(form.city),
+        features:     selectedFeatures,
       }
       const video = String(form.video_url || '').trim()
       if (video !== '') payload.video_url = video // omit entirely if empty
@@ -525,6 +579,32 @@ export default function EditListing() {
             listingId={id}
             initialImages={images}
           />
+          
+          <Card className="lg:col-span-2">
+            <h3 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">Extras</h3>
+
+            {features.length === 0 ? (
+              <div className="text-sm text-neutral-500">No extras available.</div>
+            ) : (
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3">
+                {features.map(f => {
+                  const id = Number(f.id)
+                  const checked = selectedFeatures.includes(id)
+                  return (
+                    <label key={id} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4"
+                        checked={checked}
+                        onChange={() => toggleFeature(id)}
+                      />
+                      <span>{f.name || f.label}</span>
+                    </label>
+                  )
+                })}
+              </div>
+            )}
+          </Card>
 
           <Card className="lg:col-span-2">
             <h3 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">Description</h3>
