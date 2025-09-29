@@ -57,7 +57,11 @@ export default function Favorites() {
                 listing.transmission?.name,
                 listing.year ? `Year ${listing.year}` : null,
               ].filter(Boolean).join(' • ')}
-              location={listing.city?.name}
+              location={
+                [listing.city_name, listing.region_name].filter(Boolean).join(', ')
+                || listing.city?.name  // fallback if backend not redeployed yet
+                || ''
+              }
               isFavorited={true}
               onToggleFavorite={handleToggle}
             />

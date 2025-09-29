@@ -81,6 +81,9 @@ class ListingSerializer(serializers.ModelSerializer):
     color_detail = ColorSerializer(source="color", read_only=True)
     is_favorited = serializers.SerializerMethodField()
 
+    city_name = serializers.SerializerMethodField(read_only=True)
+    region_name = serializers.SerializerMethodField(read_only=True)
+
     # Read-only contact surfaced from the seller's profile
     seller_contact_email = serializers.SerializerMethodField(read_only=True)
     seller_contact_phone = serializers.SerializerMethodField(read_only=True)
@@ -104,6 +107,7 @@ class ListingSerializer(serializers.ModelSerializer):
             "images",
             "seller_contact_email", "seller_contact_phone",
             "is_favorited",
+            "city_name", "region_name",
         ]
 
         read_only_fields = [
@@ -113,6 +117,15 @@ class ListingSerializer(serializers.ModelSerializer):
             "is_favorited", "features_detail",
         ]
 
+    # city and region game
+    def get_city_name(self, obj):
+        # safe: returns None if city missing
+        return getattr(obj.city, "name", None)
+
+    def get_region_name(self, obj):
+        city = getattr(obj, "city", None)
+        region = getattr(city, "region", None)
+        return getattr(region, "name", None)
 
     def get_is_favorited(self, obj):
         request = self.context.get("request")

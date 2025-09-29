@@ -69,7 +69,7 @@ class ListingViewSet(viewsets.ModelViewSet):
         qs = (
             Listing.objects
             .select_related(
-                "brand", "model", "city", "fuel_type", "transmission",
+                "brand", "model", "city", "city__region", "fuel_type", "transmission",
                 "body_type", "drive_type", "seller"
             )
             .prefetch_related(Prefetch("images", queryset=ListingImage.objects.order_by("order")))
@@ -270,7 +270,7 @@ class FavoriteViewSet(viewsets.ReadOnlyModelViewSet):
                 "listing",
                 "listing__brand",
                 "listing__model",
-                "listing__city",
+                "listing__city", "listing__city__region",
                 "listing__fuel_type",
                 "listing__transmission",
                 "listing__body_type",
