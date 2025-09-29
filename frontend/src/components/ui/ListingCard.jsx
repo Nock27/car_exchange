@@ -12,6 +12,7 @@ export default function ListingCard({
   isFavorited = false,
   onToggleFavorite = () => {},
   onView = () => {},
+  showFavorite = true,
 }) {
   // --- ADD: favorite click handler (prevents navigation) ---
   const handleFavClick = (e) => {
@@ -42,6 +43,7 @@ export default function ListingCard({
             <div className="flex items-start gap-2">
               <div className="flex items-start gap-2 shrink-0">
                 <div className="text-brand-600 dark:text-brand-400 font-semibold">{price}</div>
+                {showFavorite && (
                 <button
                   type="button"
                   onClick={handleFavClick}
@@ -54,6 +56,7 @@ export default function ListingCard({
                 >
                   {isFavorited ? '❤' : '♡'}
                 </button>
+                )}
               </div>
             </div>
             {/* --- END CHANGE --- */}

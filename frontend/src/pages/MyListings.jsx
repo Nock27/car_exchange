@@ -162,17 +162,15 @@ export default function MyListings() {
                       location={location}
                       image={image}
                       id={item.id}
+                      showFavorite={false}
                     />
                     <div className="flex gap-2 md:flex-col md:items-stretch">
-                      <Link to={`/listings/${item.id}/edit`} className="w-full md:w-auto">
-                        {item.is_owner && (
-                          <>
-                            <Button as={Link} to={`/listings/${item.id}/edit`}>Edit</Button>
-                            {/* ... */}
-                          </>
-                        )}
-                      </Link>
-                      <Button variant="danger" className="w-full" onClick={() => onDelete(item.id)}>Delete</Button>
+                      <Button as={Link} to={`/listings/${item.id}/edit`} className="w-full md:w-auto">
+                        Edit
+                      </Button>
+                      <Button variant="danger" className="w-full" onClick={() => onDelete(item.id)}>
+                        Delete
+                      </Button>
                     </div>
                   </div>
                 </div>
