@@ -1,5 +1,6 @@
 import Card from './Card'
 import Button from './Button'
+import { useAuth } from '@/context/AuthContext'
 import { Link } from 'react-router-dom'
 
 export default function ListingCard({
@@ -20,6 +21,8 @@ export default function ListingCard({
     e.stopPropagation()
     if (id != null) onToggleFavorite(id, !isFavorited)
   }
+  const { isAuthed } = useAuth()
+  const showFavButton = Boolean(showFavorite && isAuthed)
 
   return (
     <Card className="p-4">
@@ -43,7 +46,7 @@ export default function ListingCard({
             <div className="flex items-start gap-2">
               <div className="flex items-start gap-2 shrink-0">
                 <div className="text-brand-600 dark:text-brand-400 font-semibold">{price}</div>
-                {showFavorite && (
+                {showFavButton && (
                 <button
                   type="button"
                   onClick={handleFavClick}

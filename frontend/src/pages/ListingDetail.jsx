@@ -166,7 +166,7 @@ export default function ListingDetail() {
       setError(null)
       try {
         const [{ data: meData }, { data: detail }] = await Promise.all([
-          // me can fail (if public page) — don’t block
+          // me can fail if public page so dont block
           api.get(endpoints.me).catch(() => ({ data: null })),
           api.get(`${endpoints.listings}/${id}/`),
         ])
@@ -320,6 +320,7 @@ export default function ListingDetail() {
               <div className="text-2xl font-bold text-neutral-900 dark:text-white">
                 {priceText} <span className="text-base font-medium opacity-70">EUR</span>
               </div>
+              {me && (
               <button
                 type="button"
                 onClick={toggleFavDetail}
@@ -332,6 +333,7 @@ export default function ListingDetail() {
               >
                 {isFav ? '❤' : '♡'}
               </button>
+              )}
             </div>
           </div>
         </Card>
