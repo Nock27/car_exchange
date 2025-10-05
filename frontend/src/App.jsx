@@ -4,7 +4,6 @@ import Layout from '@/components/layout/Layout'
 import Home from '@/pages/Home'
 import Search from '@/pages/Search'
 import AdvancedSearch from '@/pages/AdvancedSearch'
-import ListingDetails from '@/pages/ListingDetails'
 import CreateListing from '@/pages/CreateListing'
 import MyListings from '@/pages/MyListings'
 import Login from '@/pages/Login'
@@ -34,8 +33,8 @@ export default function App() {
         {/* BOTH paths resolve to the advanced search page */}
         <Route path="/advanced-search" element={<AdvancedSearch />} />
         <Route path="/advanced" element={<AdvancedSearch />} />
+        <Route path="/listings/:id" element={<ListingDetail />} />
 
-        <Route path="/listing/:id" element={<ListingDetails />} />
 
         {/* Protected routes */}
         <Route element={<RequireAuth />}>
@@ -44,7 +43,6 @@ export default function App() {
           </Route>
           <Route path="/my-listings" element={<MyListings />} />
           <Route path="/listings/:id/edit" element={<EditListing />} />
-          <Route path="/listings/:id" element={<ListingDetail />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/favorites" element={<Favorites />} />
         </Route>
