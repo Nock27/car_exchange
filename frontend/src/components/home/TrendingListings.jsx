@@ -82,6 +82,7 @@ export default function TrendingListings({ limit = 6 }) {
             location={location}
             image={image}
             id={item.id}
+            showFavorite={false}
           />
         )
       })}

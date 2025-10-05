@@ -308,36 +308,6 @@ export default function AdvancedSearch() {
                   <option key={m.id} value={String(m.id)}>{m.name}</option>
                 ))}
               </Select>
-
-              {/* Condition (mutually exclusive) */}
-              <div className="grid grid-cols-3 gap-2">
-                <CheckLikeRadio
-                  label="New"
-                  checked={form.condition === 'new'}
-                  onChange={() => selectCondition('new')}
-                />
-                <CheckLikeRadio
-                  label="Used"
-                  checked={form.condition === 'used'}
-                  onChange={() => selectCondition('used')}
-                />
-                <CheckLikeRadio
-                  label="Damaged"
-                  checked={form.condition === 'damaged'}
-                  onChange={() => selectCondition('damaged')}
-                />
-              </div>
-
-              {/* Independent: For parts */}
-              <label className="inline-flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-200">
-                <input
-                  type="checkbox"
-                  checked={form.parts}
-                  onChange={e => handle('parts', e.target.checked)}
-                  className="h-4 w-4 rounded border-neutral-300 text-brand-600 focus:ring-brand-400 dark:border-gray-700"
-                />
-                For parts
-              </label>
             </div>
           </Card>
 
