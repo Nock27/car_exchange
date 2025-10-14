@@ -1,4 +1,5 @@
 import django_filters as df
+from django.db.models import Q
 from .models import Listing
 
 class ListingFilter(df.FilterSet):
@@ -24,6 +25,9 @@ class ListingFilter(df.FilterSet):
     # Simple full-text over title + description
     search      = df.CharFilter(method="filter_search")
 
+    extra       = df.CharFilter(method="filter_extras_any")
+    features    = df.CharFilter(method="filter_extras_any")
+
     class Meta:
         model = Listing
         fields = [
@@ -33,6 +37,7 @@ class ListingFilter(df.FilterSet):
             "color",
             # moderation flags if needed
             "status","is_active",
+            "extra","features",
         ]
 
     def filter_region(self, queryset, name, value):
@@ -41,3 +46,22 @@ class ListingFilter(df.FilterSet):
 
     def filter_search(self, queryset, name, value):
         return queryset.filter(title__icontains=value) | queryset.filter(description__icontains=value)
+
+    def _parse_values(self):
+        vals = []
+        for pname in ("extra", "features"):
+            for raw in self.data.getlist(pname):
+                for token in raw.split(","):
+                    t = token.strip().strip(",")
+                    if t:
+                        vals.append(t)
+        return vals
+
+    def filter_extras_any(self, qs, name, value):
+        values = self._parse_values()
+        if not values:
+            return qs
+        q = Q()
+        for v in values:
+            q |= Q(features__name__iexact=v)
+        return qs.filter(q).distinct()

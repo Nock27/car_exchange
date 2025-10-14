@@ -43,10 +43,6 @@ class ListingViewSet(viewsets.ModelViewSet):
     filterset_class = ListingFilter
     ordering_fields = ["created_at", "price", "year", "mileage"]
     ordering = ["-created_at"]  # default
-    filterset_fields = {
-        "features": ["in"],
-        "color": ["exact"],
-    }
 
     def perform_create(self, serializer):
         # Assign logged-in user as seller and set initial status to 'pending'
@@ -72,6 +68,7 @@ class ListingViewSet(viewsets.ModelViewSet):
                 "brand", "model", "city", "city__region", "fuel_type", "transmission",
                 "body_type", "drive_type", "seller"
             )
+            .prefetch_related("features")
             .prefetch_related(Prefetch("images", queryset=ListingImage.objects.order_by("order")))
             .order_by("-created_at")
         )

@@ -286,6 +286,18 @@ export default function Search() {
     }
   }, [cities, side.region])
 
+  function getExtraParamsFromQS(q) {
+  const raw = q.getAll('extra');
+  const vals = [];
+  for (const r of raw) {
+    for (const token of r.split(',')) {
+      const t = token.trim().replace(/,+$/,'');
+      if (t) vals.push(t);
+    }
+  }
+  return vals;
+}
+
 
   async function fetchListings(urlOrParams) {
     setLoading(true); setError(null)
@@ -294,7 +306,17 @@ export default function Search() {
       if (typeof urlOrParams === 'string') {
         res = await api.get(urlOrParams)
       } else {
-        res = await api.get(endpoints.listings, { params: urlOrParams })
+        const extras = getExtraParamsFromQS(q);
+        const sp = new URLSearchParams();
+
+        Object.entries(urlOrParams || {}).forEach(([k, v]) => {
+          if (v != null && v !== '') sp.set(k, String(v));
+        });
+
+        for (const ex of extras) sp.append('extra', ex);
+
+        const url = `${endpoints.listings}?${sp.toString()}`;
+        res = await api.get(url);
       }
       const data = res?.data || {}
       const results = Array.isArray(data) ? data : (data.results || [])
