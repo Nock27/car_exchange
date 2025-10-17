@@ -14,7 +14,7 @@ export default function Register() {
 
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
-  const [role, setRole] = useState('private') // 'private' | 'dealer'
+  const [role, setRole] = useState('private') // private or dealer
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
 
@@ -81,7 +81,7 @@ export default function Register() {
         password,
         role,
       })
-      // AuthContext.register auto-logs in; show home
+      // AuthContext.register auto-logs in
       navigate('/', { replace: true })
     } catch (err) {
       const data = err?.response?.data

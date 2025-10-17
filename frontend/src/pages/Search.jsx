@@ -8,7 +8,7 @@ import Button from '@/components/ui/Button'
 import ListingCard, { ListingCardSkeleton } from '@/components/ui/ListingCard'
 import { api, endpoints } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
-/* ----------------------------- helpers ----------------------------- */
+// helpers
 
 function useQuery() {
   const { search } = useLocation()
@@ -26,8 +26,6 @@ function normalizeApiUrl(nextOrPrev) {
   }
 }
 
-
-// map UI select -> DRF ordering strings
 const ORDER_UI_TO_API = {
   latest: '-created_at',
   price_asc: 'price',
@@ -37,10 +35,6 @@ const ORDER_UI_TO_API = {
 }
 const ORDER_API_TO_UI = Object.fromEntries(Object.entries(ORDER_UI_TO_API).map(([k, v]) => [v, k]))
 
-
-
-
-// tiny paginator for DRF endpoints (same behavior you use elsewhere)
 async function fetchAllPages(url, params = { page_size: 200 }) {
   const out = []
   let nextUrl = url
@@ -61,7 +55,7 @@ async function fetchAllPages(url, params = { page_size: 200 }) {
   return out
 }
 
-/* ------------------------------- page ------------------------------ */
+// page
 
 export default function Search() {
   const navigate = useNavigate()
@@ -76,9 +70,9 @@ export default function Search() {
   const [fuelTypes, setFuelTypes] = useState([])
   const [gearboxes, setGearboxes] = useState([])
 
-  // sidebar form (reflects URL on load)
+  // sidebar form
   const [side, setSide] = useState({
-    category: '',     // (optional) if you later wire categories here
+    category: '',
     brand: '',
     model: '',
     priceFrom: '',
@@ -101,11 +95,9 @@ export default function Search() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  // ordering from QS -> UI
   const orderingApi = q.get('ordering') || '-created_at'
   const orderingUi = ORDER_API_TO_UI[orderingApi] ?? 'latest'
 
-  // build API params (only allowed keys)
   async function toggleFav(listingId, shouldFav) {
     if (!isAuthed) return
     try {
@@ -143,7 +135,7 @@ export default function Search() {
     return p
   }, [q])
 
-  // ---- pagination helpers (must come AFTER apiParams is defined) ----
+  // pagination helpers
   const currentPage = useMemo(() => {
     const p = parseInt(q.get('page') || '1', 10)
     return Number.isFinite(p) && p > 0 ? p : 1
@@ -248,7 +240,7 @@ export default function Search() {
   }, [models, side.brand]);  // runs when the models for the brand arrive
 
 
-  // region → cities
+  // region to cities
   useEffect(() => {
     const regionId = side.region
     if (!regionId) { setCities([]); return }
@@ -336,10 +328,9 @@ export default function Search() {
   // load on params change
   useEffect(() => {
     fetchListings(apiParams)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(apiParams)])
 
-  // apply sidebar → write URL (AdvancedSearch stays as the “full” page)
+  // apply sidebar to write URL
   const applySidebar = () => {
     const params = new URLSearchParams(q)
     // basics
@@ -356,7 +347,6 @@ export default function Search() {
     // location
     if (side.region) params.set('region', side.region); else params.delete('region')
     if (side.city) params.set('city', side.city); else params.delete('city')
-    // keep ordering; reset page
     params.delete('page')
     navigate(`/search?${params.toString()}`)
   }

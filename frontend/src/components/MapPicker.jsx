@@ -22,14 +22,6 @@ async function reverseGeocode(lat, lon) {
   }
 }
 
-/**
- * Props:
- *  - value: { address, latitude, longitude }
- *  - center?: { lat, lng }
- *  - zoom?: number
- *  - focusOnChangeZoom?: number (default 17)  <-- NEW
- *  - onChange: ({ address, latitude, longitude }) => void
- */
 export default function MapPicker({ value, center, zoom, focusOnChangeZoom = 17, onChange }) {
   const mapRef = useRef(null)
   const markerRef = useRef(null)
@@ -92,9 +84,8 @@ export default function MapPicker({ value, center, zoom, focusOnChangeZoom = 17,
       mapRef.current = null
       markerRef.current = null
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
-  // City change (center) – keep previous behavior
   useEffect(() => {
     const map = mapRef.current
     if (!map) return
@@ -102,7 +93,6 @@ export default function MapPicker({ value, center, zoom, focusOnChangeZoom = 17,
     if (hasValidCenter) map.setView([center.lat, center.lng], zoom ?? 12, { animate: true })
   }, [center, zoom])
 
-  // External value change (e.g. autocomplete picked)
   useEffect(() => {
     const map = mapRef.current
     if (!map) return
@@ -122,7 +112,7 @@ export default function MapPicker({ value, center, zoom, focusOnChangeZoom = 17,
     }
 
     map.setView([lat, lng], focusOnChangeZoom, { animate: true })
-  }, [value?.latitude, value?.longitude, focusOnChangeZoom]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [value?.latitude, value?.longitude, focusOnChangeZoom])
 
   return (
     <div className="w-full">

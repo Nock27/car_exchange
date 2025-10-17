@@ -53,7 +53,7 @@ export default function Home() {
         </Container>
       </section>
 
-      {/* TRENDING LISTINGS (UI only) */}
+      {/* TRENDING LISTINGS */}
       <section className="py-8">
         <Container>
           <div className="mb-4 flex items-end justify-between">
@@ -72,7 +72,7 @@ export default function Home() {
   )
 }
 
-/* ----------------------------- Short Search ----------------------------- */
+// Short Search
 
 function ShortSearchCard() {
   const navigate = useNavigate()
@@ -86,7 +86,7 @@ function ShortSearchCard() {
   const [fuelTypes, setFuelTypes] = useState([])
   const [gearboxes, setGearboxes] = useState([])
 
-  // form (същия UI; пазим id-та за филтрите)
+  // form
   const [form, setForm] = useState({
     category: '',
     brand: '',
@@ -124,7 +124,7 @@ function ShortSearchCard() {
     return out
   }
 
-  // preload catalogs (вече включва categories)
+  // preload catalogs
   useEffect(() => {
     let alive = true
     ;(async () => {
@@ -149,7 +149,7 @@ function ShortSearchCard() {
     return () => { alive = false }
   }, [])
 
-  // brand → models
+  // brand to models
   useEffect(() => {
     const brandId = form.brand
     if (!brandId) { setModels([]); return }
@@ -166,7 +166,7 @@ function ShortSearchCard() {
   }, [form.brand])
 
 
-  // region → cities
+  // region to cities
   useEffect(() => {
     const regionId = form.region
     if (!regionId) { setCities([]); return }
@@ -183,7 +183,7 @@ function ShortSearchCard() {
   }, [form.region])
 
 
-  // submit → /search (като Search.jsx)
+  // submit to /search
   const submit = e => {
     e.preventDefault()
     const params = new URLSearchParams()

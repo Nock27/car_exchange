@@ -15,7 +15,6 @@ export default function ListingCard({
   onView = () => {},
   showFavorite = true,
 }) {
-  // --- ADD: favorite click handler (prevents navigation) ---
   const handleFavClick = (e) => {
     e.preventDefault()
     e.stopPropagation()
@@ -41,8 +40,6 @@ export default function ListingCard({
             <h3 className="truncate text-base font-semibold text-neutral-900 dark:text-white">
               {title}
             </h3>
-
-            {/* --- CHANGE: wrap price + add heart button next to it --- */}
             <div className="flex items-start gap-2">
               <div className="flex items-start gap-2 shrink-0">
                 <div className="text-brand-600 dark:text-brand-400 font-semibold">{price}</div>
@@ -62,7 +59,6 @@ export default function ListingCard({
                 )}
               </div>
             </div>
-            {/* --- END CHANGE --- */}
           </div>
           <div className="mt-1 truncate text-sm text-neutral-600 dark:text-neutral-300">{specs}</div>
           <div className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">{location}</div>

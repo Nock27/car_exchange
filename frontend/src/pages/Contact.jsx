@@ -4,12 +4,10 @@ import Card from '@/components/ui/Card'
 
 function maskLink(s, every = 3) {
   // Inserts zero-width spaces so browsers don't auto-link
-  // Keeps visual appearance unchanged.
   const ZWSP = '\u200B'
   let out = ''
   for (let i = 0; i < s.length; i++) {
     out += s[i]
-    // don’t split around @ or . for emails, keep readable groups
     if (s[i] !== '@' && s[i] !== '.' && (i + 1) % every === 0 && i !== s.length - 1) {
       out += ZWSP
     }

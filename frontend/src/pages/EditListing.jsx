@@ -34,10 +34,10 @@ export default function EditListing() {
   const [features, setFeatures] = useState([])
   const [selectedFeatures, setSelectedFeatures] = useState([])
 
-  // fallback labels for selected region/city (if options not loaded yet)
+  // fallback labels for selected region/city
   const [prefillNames, setPrefillNames] = useState({ region: '', city: '' })
 
-  // form state (Euro removed)
+  // form state
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -63,7 +63,7 @@ export default function EditListing() {
   })
   const handle = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
 
-  /* -------------------- helpers -------------------- */
+  // helpers
   const labelTextCls = 'text-xs font-medium text-neutral-700 dark:text-neutral-300'
   const fieldStackCls = 'grid gap-1'
 
@@ -110,7 +110,7 @@ export default function EditListing() {
       const next = data?.next || null
       if (next) {
         nextUrl = next.startsWith(base) ? next.slice(base.length) : next
-        nextParams = {} // DRF next already encodes paging
+        nextParams = {}
       } else {
         nextUrl = null
       }
@@ -174,7 +174,7 @@ export default function EditListing() {
     return lines.length ? lines : ['Saving failed. Please try again.']
   }
 
-  /* -------------------- preload static catalogs -------------------- */
+  // Preload static catalogs 
   useEffect(() => {
     let alive = true
     ;(async () => {
@@ -205,7 +205,7 @@ export default function EditListing() {
     return () => { alive = false }
   }, [])
 
-  /* -------------------- load listing + warm deps -------------------- */
+  // load listing and warm deps
   useEffect(() => {
     let alive = true
     ;(async () => {
@@ -254,7 +254,6 @@ export default function EditListing() {
           longitude: (data.longitude ?? '') === null ? '' : String(data.longitude ?? ''),
         })
 
-        // Fallback names for immediate display
         setPrefillNames({
           region: data.region_name || data.region?.name || '',
           city:   data.city_name || data.city?.name || '',
@@ -273,8 +272,6 @@ export default function EditListing() {
         } else {
           setSelectedFeatures([])
 }
-
-        // Warm dependent lists so the selected IDs appear in options
         if (brandId) {
           try {
             const ms = await fetchByQuery(endpoints.models, { brand: brandId, page_size: 500 })
@@ -303,7 +300,7 @@ export default function EditListing() {
     return () => { alive = false }
   }, [id])
 
-  /* -------------------- brand → models -------------------- */
+  // brand to models
   useEffect(() => {
     const brandId = form.brand
     if (!brandId) { setModels([]); handle('model', ''); return }
@@ -321,7 +318,6 @@ export default function EditListing() {
       }
     })()
     return () => { alive = false }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.brand])
 
   // helpers to locate selected region/city objects for autocomplete context
@@ -330,7 +326,6 @@ export default function EditListing() {
   const selectedRegion = regionsArr.find(r => String(r.id) === String(form.region)) || null
   const selectedCity   = citiesArr.find(c => String(c.id) === String(form.city)) || null
 
-  // prefer city center if available
   const mapCenter = useMemo(() => {
     const lat = selectedCity?.lat ?? selectedCity?.latitude
     const lng = selectedCity?.lng ?? selectedCity?.longitude
@@ -356,7 +351,7 @@ export default function EditListing() {
     setForm(prev => ({ ...prev, address, latitude, longitude }))
   }
 
-  /* -------------------- region → cities -------------------- */
+  // region to cities
   useEffect(() => {
     const regionId = form.region
     if (!regionId) { setCities([]); handle('city', ''); return }
@@ -374,10 +369,9 @@ export default function EditListing() {
       }
     })()
     return () => { alive = false }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.region])
 
-  // load all available features (extras)
+  // load all available features
   useEffect(() => {
     let alive = true
     ;(async () => {
@@ -392,7 +386,7 @@ export default function EditListing() {
     return () => { alive = false }
   }, [])
 
-  /* -------------------- validation -------------------- */
+  // validation
   const validateForm = (f) => {
     const errs = []
     const mustBePosInt = [
@@ -413,7 +407,7 @@ export default function EditListing() {
     return errs
   }
 
-  /* -------------------- submit -------------------- */
+  // submit
   const submit = async (e) => {
     e.preventDefault()
     setErrorLines([])

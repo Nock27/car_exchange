@@ -13,7 +13,7 @@ import { useAuth } from '@/context/AuthContext'
 const EURO_OPTIONS = ['Euro 1','Euro 2','Euro 3','Euro 4','Euro 5','Euro 6']
 const YT_VIMEO_RE = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|vimeo\.com)\/.+/i
 
-// Fetch all pages from a DRF endpoint (works with both paginated + non-paginated)
+// Fetch all pages from a DRF endpoint
 async function fetchAll(api, url, params = {}) {
   const out = [];
   let nextUrl = url;
@@ -47,7 +47,6 @@ function formatApiErrors(data) {
   if (!data || typeof data === 'string') return data;
   if (data.detail) return data.detail;
 
-  // Flatten { field: ["msg1", "msg2"], non_field_errors: [...] }
   const lines = [];
   for (const [field, messages] of Object.entries(data)) {
     if (Array.isArray(messages)) {
@@ -111,7 +110,7 @@ export default function CreateListing() {
         };
       }
     }
-    // No valid coords → send only address, omit lat/lng entirely
+    // if there are no valid coords, send only address, omit lat/lng entirely
     return { address: address || null };
   };
 
@@ -190,7 +189,7 @@ export default function CreateListing() {
     });
   }
 
-  // (optional) simple up/down reorder
+  //simple up/down reorder
   function moveImage(id, dir) {
     setImages((prev) => {
       const i = prev.findIndex((p) => p.id === id);
@@ -209,7 +208,7 @@ export default function CreateListing() {
     for (const k of REQUIRED) {
       if (isEmpty(f[k])) e[k] = 'This field is required.'
     }
-    // numeric sanity (frontend hints; backend still the source of truth)
+    // numeric sanity
     if (f.price && !/^\d+(\.\d+)?$/.test(String(f.price))) e.price = 'Enter a valid number.'
     if (f.year && !/^\d+$/.test(String(f.year))) e.year = 'Enter a valid year.'
     if (f.engine_cc && Number(f.engine_cc) <= 0) e.engine_cc = 'Must be greater than 0.'
@@ -224,7 +223,6 @@ export default function CreateListing() {
         if (Array.isArray(v)) map[k] = v.join(' ')
         else if (typeof v === 'string') map[k] = v
         else if (v && typeof v === 'object') {
-          // nested errors (rare) -> flatten
           for (const [kk, vv] of Object.entries(v)) {
             map[`${k}.${kk}`] = Array.isArray(vv) ? vv.join(' ') : String(vv)
           }
@@ -240,7 +238,6 @@ export default function CreateListing() {
 // cleanup blob urls on unmount
 useEffect(() => {
   return () => { images.forEach((p) => URL.revokeObjectURL(p.url)); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
 }, []);
 
   const [selectedFeatureIds, setSelectedFeatureIds] = useState(new Set())
@@ -415,7 +412,7 @@ useEffect(() => {
 
 
 
-  //======
+  //=======
 
   const onChange = (name, value) => setForm(prev => ({ ...prev, [name]: value }))
   const onChangeNumber = (name) => (e) => {
@@ -458,7 +455,7 @@ useEffect(() => {
   const onFiles = (e) => {
     const list = Array.from(e.target.files || []);
     addFiles(list);       // append instead of overwrite
-    e.target.value = '';  // let user pick the same files again later
+    e.target.value = '';
   };
 
   const canSubmit = useMemo(() => (
@@ -485,12 +482,12 @@ useEffect(() => {
     errors.push(`Year must be between 1930 and ${currentYear}.`)
   }
 
-  // Engine CC sanity check (optional)
+  // Engine CC sanity check
   if (form.engine_cc && Number(form.engine_cc) < 100) {
     errors.push("Engine size (cc) must be at least 100.")
   }
 
-  // Power HP sanity check (optional)
+  // Power HP sanity check
   if (form.power_hp && Number(form.power_hp) < 10) {
     errors.push("Power must be at least 10 hp.")
   }
@@ -528,7 +525,7 @@ useEffect(() => {
       const payload = {
         title:        strOrEmpty(form.title).trim(),
         description:  strOrEmpty(form.description).trim(),
-        price:        intOrNull(form.price),      // number (not string)
+        price:        intOrNull(form.price),      // number
         year:         intOrNull(form.year),
         mileage:      intOrNull(form.mileage),
         category:     idOrNull(form.category),
@@ -551,15 +548,15 @@ useEffect(() => {
 
 
 
-      // 2) Create the listing with ONE request (remove tryPayloads entirely)
+      // 2) Create the listing
       const { data: created } = await api.post(`${endpoints.listings}/`, payload)
 
-      // 3) Upload images 
+      //Upload images 
       if (images.length) {
         for (let i = 0; i < images.length; i++) {
           const fd = new FormData();
           fd.append('image', images[i].file);
-          fd.append('order', String(i)); // optional
+          fd.append('order', String(i));
 
           await api.post(
             `${endpoints.listings}/${created.id}/upload_image/`,
@@ -984,7 +981,6 @@ useEffect(() => {
                             Remove
                           </button>
 
-                          {/* optional reorder buttons; remove if you don't want them */}
                           <div className="flex gap-1">
                             <button
                               type="button"

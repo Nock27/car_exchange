@@ -20,7 +20,7 @@ export default function RequirePhone() {
         }
       } catch (e) {
         console.error('Profile check failed', e)
-        // fallback: if profile cannot load, still send to profile page
+        // if profile cannot load, still send to profile page
         navigate('/profile', { replace: true, state: { from: location.pathname } })
         return
       } finally {

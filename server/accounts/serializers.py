@@ -34,19 +34,12 @@ class MeSerializer(serializers.ModelSerializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
-    """
-    Profile editor: update email (on User) + phone (on Profile).
-    We remove DRF's default UniqueValidator to avoid the
-    unfriendly "user profile with this phone e164 already exists."
-    and provide our own clear error.
-    """
     email = serializers.EmailField()
 
     class Meta:
         model = UserProfile
         fields = ["email", "phone_e164"]
         extra_kwargs = {
-            # Remove auto UniqueValidator so we control the message
             "phone_e164": {"validators": []},
         }
 
@@ -56,14 +49,12 @@ class UserProfileSerializer(serializers.ModelSerializer):
             return None
         v = value.strip()
 
-        # Light E.164-style check
         import re
         if not re.fullmatch(r"\+?\d{6,15}", v):
             raise serializers.ValidationError(
                 "Enter a valid phone number in international format (e.g. +35988XXXXXXX)."
             )
 
-        # Manual uniqueness check with friendly message
         qs = UserProfile.objects.filter(phone_e164=v)
         if self.instance:
             qs = qs.exclude(pk=self.instance.pk)
@@ -76,7 +67,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         phone = validated_data.get("phone_e164", None)
         instance.phone_e164 = None if (phone in (None, "")) else phone
 
-        # Update email on User (unique at model level)
+        # Update email on User
         email = validated_data.get("email", None)
         if email is not None and email != instance.user.email:
             instance.user.email = email

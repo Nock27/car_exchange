@@ -16,7 +16,7 @@ export default function TrendingListings({ limit = 6 }) {
           params: { ordering: '-created_at', page: 1, page_size: limit },
         })
         const results = Array.isArray(data) ? data : (data?.results || [])
-        if (alive) setItems(results.slice(0, limit)) // client-side cap too (in case pagination is off)
+        if (alive) setItems(results.slice(0, limit)) // client-side cap too,in case pagination is off
       } catch (e) {
         console.error(e)
         if (alive) setError('Failed to load trending listings.')
@@ -34,7 +34,6 @@ export default function TrendingListings({ limit = 6 }) {
   }
 
   if (loading) {
-    // Return exactly `limit` skeletons; Home's grid will place them
     return (
       <>
         {Array.from({ length: limit }).map((_, i) => <ListingCardSkeleton key={i} />)}

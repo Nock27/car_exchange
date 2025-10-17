@@ -20,7 +20,7 @@ class User(AbstractUser):
 
 class UserProfile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')
-    # enforce uniqueness at DB level
+    # enforce uniquenesss at DB level
     phone_e164 = models.CharField(max_length=20, unique=True, null=True, blank=True, default=None)
 
     def __str__(self):

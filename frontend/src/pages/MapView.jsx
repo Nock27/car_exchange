@@ -112,7 +112,7 @@ export default function MapView() {
     return () => { alive = false }
   }, [])
 
-  // region -> cities
+  // region to cities
   useEffect(() => {
     let alive = true
     ;(async () => {
@@ -127,10 +127,9 @@ export default function MapView() {
       }
     })()
     return () => { alive = false }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [f.region])
 
-  // brand -> models
+  // brand to models
   useEffect(() => {
     let alive = true
     ;(async () => {
@@ -145,7 +144,6 @@ export default function MapView() {
       }
     })()
     return () => { alive = false }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [f.brand])
 
   // init map once
@@ -210,7 +208,7 @@ export default function MapView() {
           const title = p.title || [p.brand_name, p.model_name].filter(Boolean).join(' ') || 'Listing'
           const price = p.price != null ? `${Number(p.price).toLocaleString('bg-BG')} лв` : ''
 
-          // first image (thumbnail or first in images[])
+          // first image (thumbnail)
           const imgRaw =
             p.thumbnail ||
             (p.images && p.images[0] && (p.images[0].image || p.images[0].url)) ||
@@ -220,7 +218,7 @@ export default function MapView() {
 
           const marker = L.marker([lat, lng], { icon: pinIcon })
 
-          // Rich hover: title + price + first photo (if any)
+          // Rich hover: title, price, first photo (if there is one)
           const tooltipHtml = `
             <div class="map-card">
               ${img
@@ -241,7 +239,7 @@ export default function MapView() {
             className: 'leaflet-custom-tooltip',
           });
 
-          // Click -> open listing in new tab (/listings/:id)
+          // When click on the pin, open listing in new tab (/listings/:id)
           marker.on('click', () => {
             const url = `/listings/${p.id}`
             window.open(url, '_blank', 'noopener,noreferrer')
@@ -259,7 +257,7 @@ export default function MapView() {
       } catch (e) {
         console.error('Map points load failed:', e)
         if (alive) setError('Failed to load points.')
-        setNoResults(false) // network error ≠ “no match”
+        setNoResults(false)
       } finally {
         if (alive) setLoading(false)
       }
@@ -267,7 +265,6 @@ export default function MapView() {
     return () => { alive = false }
   }, [queryParams])
 
-  // UX: when choosing region, zoom in a bit immediately
   const onRegionChange = (v) => {
     onF('region', v)
     onF('city', '')

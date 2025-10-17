@@ -7,14 +7,6 @@ import Card from '@/components/ui/Card'
 import Select from '@/components/ui/Select'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
-
-/**
- * Advanced Search (UI only)
- * - No results here. On Apply -> navigate('/search?…')
- * - Includes large Extras groups as checkboxes
- * - Mutually exclusive condition (new/used/damaged) + independent 'parts'
- */
-
 export default function AdvancedSearch() {
   const navigate = useNavigate()
 
@@ -31,13 +23,13 @@ export default function AdvancedSearch() {
 
   const [form, setForm] = useState({
     // Basics
-    category: '', // cars | buses | trucks
+    category: '', // cars, buses, trucks
     brand: '',
     model: '',
-    condition: '', // 'new' | 'used' | 'damaged'
+    condition: '', // 'new', 'used', 'damaged'
     parts: false,
 
-    // Price & Mileage
+    // Price and Mileage
     priceFrom: '',
     priceTo: '',
     mileageMax: '',
@@ -47,7 +39,7 @@ export default function AdvancedSearch() {
     yearTo: '',
     month: '',
 
-    // Power & Displacement
+    // Power and Displacement
     ccFrom: '',
     ccTo: '',
     powerFrom: '',
@@ -184,12 +176,12 @@ export default function AdvancedSearch() {
     const p = new URLSearchParams()
 
     // Basics
-    // Normalize category → numeric ID (API expects number)
+    // Normalize category- numeric ID (API expects number)
     if (form.category) {
       if (/^\d+$/.test(String(form.category))) {
         p.set('category', String(form.category))
       } else {
-        // fallback: user somehow has "cars"/"buses"/"trucks" in state; map by name
+        // fallback- user somehow has "cars"/"buses"/"trucks" in state; map by name
         const cat = categories.find(c =>
           String(c.name).toLowerCase() === String(form.category).toLowerCase()
         )
@@ -205,7 +197,7 @@ export default function AdvancedSearch() {
     if (form.parts) p.set('parts', '1')
 
 
-    // Price & Mileage
+    // Price and Mileage
     if (form.priceFrom) p.set('price_min', form.priceFrom)
     if (form.priceTo)   p.set('price_max', form.priceTo)
     if (form.mileageMax) p.set('mileage_max', form.mileageMax)
@@ -215,25 +207,24 @@ export default function AdvancedSearch() {
     if (form.yearTo)   p.set('year_max', form.yearTo)
     // month (UI-only; Listing has no month field)
 
-    // Power & CC
+    // Power and CC
     if (form.ccFrom)     p.set('cc_from', form.ccFrom)
     if (form.ccTo)       p.set('cc_to', form.ccTo)
     if (form.powerFrom)  p.set('power_from', form.powerFrom)
     if (form.powerTo)    p.set('power_to', form.powerTo)
 
-    // Technical (map to API field names)
+    // Technical fields
     if (form.engine)       p.set('fuel_type', form.engine)
     if (form.gearbox)      p.set('transmission', form.gearbox)
     if (form.euro)         p.set('euro', form.euro)
     if (form.categoryBody) p.set('body_type', form.categoryBody)
     if (form.drive)        p.set('drive_type', form.drive)
-    if (form.color)        p.set('color', form.color)            // Color ID
+    if (form.color)        p.set('color', form.color)
 
     // Location
-    if (form.region) p.set('region', form.region)                // NEW: backend now supports this
+    if (form.region) p.set('region', form.region)
     if (form.city)   p.set('city', form.city)
 
-    // Extras (multiple) — UI only unless you wire to /features
     if (form.extras.size) {
       for (const x of form.extras) p.append('extra', x)
     }
@@ -311,7 +302,7 @@ export default function AdvancedSearch() {
             </div>
           </Card>
 
-          {/* Price & Mileage */}
+          {/* Price and Mileage */}
           <Card>
             <h3 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">Price & mileage</h3>
             <div className="grid gap-3 md:grid-cols-2">
@@ -345,7 +336,7 @@ export default function AdvancedSearch() {
             </div>
           </Card>
 
-          {/* Power & Displacement */}
+          {/* Power and Displacement */}
           <Card>
             <h3 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">Power & displacement</h3>
             <div className="grid gap-3 md:grid-cols-2">
@@ -431,7 +422,7 @@ export default function AdvancedSearch() {
   )
 }
 
-/* ------------------------------- Subparts ------------------------------- */
+// Subparts
 
 function CheckLikeRadio({ label, checked, onChange }) {
   return (
@@ -448,7 +439,6 @@ function CheckLikeRadio({ label, checked, onChange }) {
 }
 
 function ExtrasCard({ form, toggleExtra }) {
-  // Option sets condensed from your Specs (can be expanded anytime)
   const SAFETY = [
     'GPS tracking system','Automatic stability control','Adaptive headlights',
     'ABS','Airbags - Rear','Airbags - Front','Airbags - Side','EBD','ESP',

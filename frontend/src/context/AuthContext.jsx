@@ -38,11 +38,11 @@ export function AuthProvider({ children }) {
   // Register -> create user -> AUTO-LOGIN with same credentials -> set user
   const register = async ({ username, email, password, role }) => {
     await api.post(endpoints.register, { username, email, password, role })
-    const me = await login({ username, password }) // auto-login here
+    const me = await login({ username, password }) // auto-login
     return me
   }
 
-  // Always go Home on logout (hard redirect beats route guards)
+  // Always go Home on logout
   const logout = () => {
     setTokens({ access: null, refresh: null })
     setUser(null)

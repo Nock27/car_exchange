@@ -48,9 +48,8 @@ class ListingAdmin(admin.ModelAdmin):
     search_fields = ("title", "description", "vin")
     ordering = ("-id",)
     actions = ["approve_listings", "reject_listings", "mark_expired"]
-    filter_horizontal = ("features",)  # adds a nice dual-list selector
+    filter_horizontal = ("features",)
 
-    # Make status / is_active editable directly in the changelist (optional)
     list_editable = ("status", "is_active")
 
     def approve_listings(self, request, queryset):

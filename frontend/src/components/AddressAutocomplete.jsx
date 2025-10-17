@@ -1,13 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-/**
- * AddressAutocomplete (no-portal version)
- * - Tries Photon (komoot) first, falls back to Nominatim.
- * - Biases by selected city when given.
- * - Dropdown absolutely positioned with a very high z-index so it floats above Leaflet.
- */
-
-const CONTACT_EMAIL = 'thesis@example.com' // etiquette for Nominatim
+const CONTACT_EMAIL = 'thesis@example.com'
 
 function getCenter(obj) {
   if (!obj) return null
@@ -22,7 +15,6 @@ async function searchPhoton(q, lat, lon) {
   const query = (q || '').trim()
   if (query.length < 3) return []
 
-  // Skip Photon for non-ASCII (e.g., Cyrillic) to avoid 400s
   if (/[^\u0000-\u007F]/.test(query)) return []
 
   const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=8&lang=bg`

@@ -4,7 +4,7 @@ import ListingCard, { ListingCardSkeleton } from '@/components/ui/ListingCard'
 import { api, endpoints } from '@/lib/api'
 
 export default function Favorites() {
-  const [items, setItems] = useState(null) // null = loading
+  const [items, setItems] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -12,7 +12,7 @@ export default function Favorites() {
       try {
         const { data } = await api.get(endpoints.favorites, { params: { page_size: 200 } })
         const rows = Array.isArray(data) ? data : (data?.results || [])
-        if (!cancelled) setItems(rows) // [{id, listing, created_at}]
+        if (!cancelled) setItems(rows)
       } catch (e) {
         console.error(e)
         if (!cancelled) setItems([])
@@ -59,7 +59,7 @@ export default function Favorites() {
               ].filter(Boolean).join(' • ')}
               location={
                 [listing.city_name, listing.region_name].filter(Boolean).join(', ')
-                || listing.city?.name  // fallback if backend not redeployed yet
+                || listing.city?.name
                 || ''
               }
               isFavorited={true}

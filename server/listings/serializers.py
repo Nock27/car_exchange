@@ -7,11 +7,8 @@ from .models import (
     Category, FuelType, TransmissionType, BodyType, DriveType, Feature, Color, Favorite
 )
 
-# 17 chars, excludes I, O, Q
 VIN_RE = re.compile(r'^[A-HJ-NPR-Z0-9]{17}$')
 
-
-# --------- Simple enums / catalog ---------
 class BrandSerializer(serializers.ModelSerializer):
     class Meta:
         model = Brand
@@ -57,8 +54,6 @@ class DriveTypeSerializer(serializers.ModelSerializer):
         model = DriveType
         fields = ["id", "name"]
 
-
-# --------- Media ---------
 class ListingImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ListingImage
@@ -72,7 +67,6 @@ class FeatureSerializer(serializers.ModelSerializer):
         model = Feature
         fields = ["id", "group", "name"]
 
-# --------- Listing (core) ---------
 class ListingSerializer(serializers.ModelSerializer):
     images = ListingImageSerializer(many=True, read_only=True)
     features = serializers.PrimaryKeyRelatedField(queryset=Feature.objects.all(), many=True, required=False)
@@ -84,7 +78,6 @@ class ListingSerializer(serializers.ModelSerializer):
     city_name = serializers.SerializerMethodField(read_only=True)
     region_name = serializers.SerializerMethodField(read_only=True)
 
-    # Read-only contact surfaced from the seller's profile
     seller_contact_email = serializers.SerializerMethodField(read_only=True)
     seller_contact_phone = serializers.SerializerMethodField(read_only=True)
     features_detail = FeatureSerializer(source="features", many=True, read_only=True)
@@ -117,9 +110,7 @@ class ListingSerializer(serializers.ModelSerializer):
             "is_favorited", "features_detail",
         ]
 
-    # city and region game
     def get_city_name(self, obj):
-        # safe: returns None if city missing
         return getattr(obj.city, "name", None)
 
     def get_region_name(self, obj):
@@ -136,7 +127,6 @@ class ListingSerializer(serializers.ModelSerializer):
         except Exception:
             return False
 
-    # ----- Field-level validation -----
     def validate_year(self, v):
         current = timezone.now().year
         if v < 1950 or v > current + 1:
@@ -166,9 +156,7 @@ class ListingSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("VIN must be 17 chars (A–Z, 0–9) without I, O, Q.")
         return v
 
-    # ----- Object-level validation -----
     def validate(self, attrs):
-        # 0) Enforce: seller must have phone before creating/updating listings
         request = self.context.get("request")
         if request and request.user and request.user.is_authenticated:
             profile = getattr(request.user, "profile", None)
@@ -178,7 +166,6 @@ class ListingSerializer(serializers.ModelSerializer):
                     "non_field_errors": ["Please add your phone number in your profile before posting a listing."]
                 })
 
-        # 1) Ensure selected model belongs to brand
         brand_in = attrs.get("brand", getattr(self.instance, "brand", None))
         model_in = attrs.get("model", getattr(self.instance, "model", None))
         if brand_in and model_in:
@@ -188,7 +175,6 @@ class ListingSerializer(serializers.ModelSerializer):
             if model_obj and model_obj.brand_id != brand_id:
                 raise serializers.ValidationError({"model": "Selected model does not belong to the chosen brand."})
 
-        # 2) If address provided, require both coordinates (keep precise pin)
         addr = attrs.get("address")
         lat = attrs.get("latitude", None)
         lng = attrs.get("longitude", None)
@@ -219,7 +205,6 @@ class ListingSerializer(serializers.ModelSerializer):
         return listing
 
 
-    # ----- Contact surface -----
     def get_seller_contact_email(self, obj: Listing):
         user = getattr(obj, "seller", None)
         return getattr(user, "email", "") if user else ""

@@ -1,28 +1,28 @@
 import axios from 'axios'
 
-// ---- Base URL normalization ----
+// Base URL normalization
 const raw = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(/\/+$/,'')
 const rootBaseURL = raw.endsWith('/api') ? raw.slice(0, -4) : raw
 const apiPrefix = raw.endsWith('/api') ? '' : '/api'
 
-// ---- Axios instance ----
+// Axios instance
 export const api = axios.create({
   baseURL: rootBaseURL,
-  withCredentials: false, // we use Bearer tokens, not cookies
+  withCredentials: false, // we use Bearer tokens
 })
 
-// ---- Endpoints ----
+// Endpoints
 export const endpoints = {
-  // Auth (root)
+  // Auth
   login: '/auth/login',
   refresh: '/auth/refresh',
   me: '/auth/me',
   register: '/auth/register',
 
-  // Profile (contact defaults)
+  // Profile
   profile: '/api/profile/',
 
-  // Data (under /api)
+  // Data
   brands: `${apiPrefix}/brands/`,
   models: `${apiPrefix}/models/`,
   categories: `${apiPrefix}/categories/`,
@@ -42,11 +42,6 @@ export const endpoints = {
   favorites: `${apiPrefix}/favorites/`,
 }
 
-// ---- Helper: normalize DRF list responses to plain arrays ----
-/**
- * Accepts an axios Response or a raw object.
- * Returns [] | data | data.results | data.data (first array it finds)
- */
 export function toArray(resOrObj) {
   const d = resOrObj && resOrObj.data !== undefined ? resOrObj.data : resOrObj
   if (Array.isArray(d)) return d
@@ -55,7 +50,7 @@ export function toArray(resOrObj) {
   return []
 }
 
-// ---- Token storage ----
+// Token storage
 const ACCESS_KEY = 'auth_access'
 const REFRESH_KEY = 'auth_refresh'
 
@@ -74,14 +69,14 @@ export function getRefresh() {
   return localStorage.getItem(REFRESH_KEY)
 }
 
-// ---- Attach Authorization header ----
+// Attach Authorization header
 api.interceptors.request.use((config) => {
   const token = getAccess()
   if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })
 
-// ---- Auto-refresh on 401 ----
+// Auto-refresh on 401
 let isRefreshing = false
 let waitQueue = []
 

@@ -26,9 +26,9 @@ export default function ListingDetail() {
   const labelTextCls = 'text-xs font-medium text-neutral-700 dark:text-neutral-300'
   const valueTextCls = 'text-sm text-neutral-900 dark:text-neutral-100'
 
-  /* ---------------- helpers ---------------- */
+  // helpers
 
-  // tolerant extractor (id could be number, string, or object with id)
+  // tolerant extractor
   const getId = (x) => {
     if (x == null || x === '') return ''
     if (typeof x === 'number') return String(x)
@@ -51,7 +51,6 @@ export default function ListingDetail() {
     try {
       const url = new URL(raw)
       const host = url.hostname.replace(/^www\./, '')
-      // YouTube
       if (host === 'youtube.com') {
         const v = url.searchParams.get('v')
         return v ? `https://www.youtube.com/embed/${v}` : ''
@@ -60,7 +59,6 @@ export default function ListingDetail() {
         const id = url.pathname.replace(/^\//, '')
         return id ? `https://www.youtube.com/embed/${id}` : ''
       }
-      // Vimeo
       if (host === 'vimeo.com') {
         const id = url.pathname.replace(/^\//, '')
         return id ? `https://player.vimeo.com/video/${id}` : ''
@@ -69,7 +67,7 @@ export default function ListingDetail() {
     return ''
   }
 
-  // ---- contact + address helpers ----
+  // contact + address helpers
   const firstNonEmpty = (...vals) => vals.find(v => v != null && String(v).trim() !== '') || ''
 
   const extractContact = (listing) => {
@@ -86,17 +84,15 @@ export default function ListingDetail() {
       `${seller.first_name || ''} ${seller.last_name || ''}`.trim()
     )
 
-    // your backend already returns these (per our check), keep fallbacks
     const email = firstNonEmpty(listing.seller_contact_email, profile.email, seller.email)
     const phone = firstNonEmpty(listing.seller_contact_phone, profile.phone_e164, profile.phone, seller.phone)
 
     return { nickname, email, phone }
   }
 
-  // Build a human address from whatever we have
   const buildAddress = (listing, names) => {
     const parts = [
-      listing.address,               // e.g. "ul. Ivan Vazov 10"
+      listing.address,
       listing.address_line,
       listing.street,
       listing.location_address,
@@ -111,7 +107,7 @@ export default function ListingDetail() {
   const mapsUrl = (addr) => addr ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}` : ''
 
 
-  // images list (sorted) + active index
+  // images list (sorted) and active index
   const images = useMemo(() => {
     const list = Array.isArray(listing?.images) ? listing.images.slice() : []
     list.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.id ?? 0) - (b.id ?? 0))
@@ -157,7 +153,7 @@ export default function ListingDetail() {
     }
   }
 
-  /* ---------------- load me + listing ---------------- */
+  // load me and listing
 
   useEffect(() => {
     let alive = true
@@ -166,7 +162,7 @@ export default function ListingDetail() {
       setError(null)
       try {
         const [{ data: meData }, { data: detail }] = await Promise.all([
-          // me can fail if public page so dont block
+          // me can fail if it is public page, so let's not block it
           api.get(endpoints.me).catch(() => ({ data: null })),
           api.get(`${endpoints.listings}/${id}/`),
         ])
@@ -175,7 +171,7 @@ export default function ListingDetail() {
         setMe(meData)
         setListing(detail)
 
-        // figure out ids for catalogs (tolerant)
+        // figure out ids for catalogs
         const categoryId    = getId(detail.category ?? detail.category_id)
         const brandId       = getId(detail.brand ?? detail.brand_id)
         const modelId       = getId(detail.model ?? detail.model_id)
@@ -235,7 +231,7 @@ export default function ListingDetail() {
     return () => { alive = false }
   }, [id])
 
-  /* ---------------- actions ---------------- */
+  // actions
 
   const isOwner = (() => {
     if (!me || !listing) return false
@@ -259,7 +255,7 @@ export default function ListingDetail() {
     }
   }
 
-  /* ---------------- render ---------------- */
+  // render
 
   if (loading) {
     return (
@@ -434,6 +430,10 @@ export default function ListingDetail() {
                 <div className={labelTextCls}>Color</div>
                 <div className={valueTextCls}>{names.color || '—'}</div>
               </div>
+              <div>
+                <div className={labelTextCls}>Euro Standard</div>
+                <div className={valueTextCls}>{listing.euro_standard || '—'}</div>
+              </div>
             </div>
           </Card>
 
@@ -501,7 +501,7 @@ export default function ListingDetail() {
             </div>
 
 
-            {/* Owner actions … (leave your existing owner buttons here) */}
+            {/* Owner actions */}
             {isOwner && (
               <div className="mt-6 flex flex-wrap gap-2">
                 {/* ... */}

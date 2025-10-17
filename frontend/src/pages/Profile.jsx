@@ -57,7 +57,7 @@ export default function Profile() {
     setFormError('')
     setFieldErrors({ email: '', phone_e164: '' })
 
-    // very light client-side check for phone
+    // check for phone
     const clean = (phone || '').replace(/[^\d+]/g, '')
     if (!clean) {
       setFieldErrors({ email: '', phone_e164: 'Please enter your phone number (e.g. +35988XXXXXXX).' })
@@ -137,7 +137,7 @@ export default function Profile() {
             )}
           </div>
 
-          {/* Form-level error / ok */}
+          {/* Form-level error */}
           {formError && (
             <div className="rounded-md border border-red-300 bg-red-50 p-2 text-sm text-red-700">
               {formError}

@@ -38,11 +38,10 @@ class ListingViewSet(viewsets.ModelViewSet):
     serializer_class = ListingSerializer
     permission_classes = [IsSellerOrReadOnly, IsOwnerOrAdmin]
 
-    # main list/search config
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = ListingFilter
     ordering_fields = ["created_at", "price", "year", "mileage"]
-    ordering = ["-created_at"]  # default
+    ordering = ["-created_at"]
 
     def perform_create(self, serializer):
         # Assign logged-in user as seller and set initial status to 'pending'
@@ -79,7 +78,6 @@ class ListingViewSet(viewsets.ModelViewSet):
             return qs
         return qs.filter(Q(status="approved", is_active=True) | Q(seller=u))
 
-    # Upload a single image (multipart/form-data: image=<file>)
     @action(detail=True, methods=["post"], url_path="upload_image")
     def upload_image(self, request, pk=None):
         listing = self.get_object()
@@ -163,7 +161,7 @@ class ListingViewSet(viewsets.ModelViewSet):
         if t and t.isdigit():
             qs = qs.filter(mileage__lte=int(t))
 
-        # simple text search
+        # text search
         search = p.get("search")
         if search:
             qs = qs.filter(Q(title__icontains=search) | Q(description__icontains=search))
@@ -174,7 +172,7 @@ class ListingViewSet(viewsets.ModelViewSet):
         data = []
         build_abs = request.build_absolute_uri
         for x in qs:
-            # thanks to the Prefetch in get_queryset(), x.images is ordered by "order"
+            #  because of Prefetch in get_queryset(), x.images is ordered by "order"
             first_img = x.images.first() if hasattr(x, "images") else None
             thumbnail = build_abs(first_img.image.url) if (first_img and getattr(first_img, "image", None)) else None
 
@@ -186,7 +184,7 @@ class ListingViewSet(viewsets.ModelViewSet):
                 "lng": x.longitude,
                 "region_name": getattr(getattr(x.city, "region", None), "name", None),
                 "city_name": getattr(x.city, "name", None),
-                "thumbnail": thumbnail,  # <-- MapView.jsx reads this
+                "thumbnail": thumbnail,
             })
 
         return Response({"results": data})

@@ -66,7 +66,7 @@ export function PhotosEditor({ listingId, initialImages = [], maxImages = 15, on
     if (!window.confirm('Remove this photo?')) return
     setBusy(true)
     try {
-      const url = `${endpoints.listings}/${listingId}/images/${img.id}/`  // matches the backend action above
+      const url = `${endpoints.listings}/${listingId}/images/${img.id}/`
       const res = await api.delete(url)
       if (!res || res.status === 200 || res.status === 204) {
         setImages(prev => prev.filter(x => x.id !== img.id))

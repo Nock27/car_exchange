@@ -9,7 +9,7 @@ from datetime import timedelta
 
 
 class Category(models.Model):
-    name = models.CharField(max_length=50, unique=True)  # e.g., Car, Motorcycle, Truck
+    name = models.CharField(max_length=50, unique=True)
     def __str__(self): return self.name
 
     class Meta:
@@ -27,7 +27,6 @@ class CarModel(models.Model):
         indexes = [models.Index(fields=["brand", "name"])]
     def __str__(self): return f"{self.brand} {self.name}"
 
-# Normalized enums (good for filters & consistency)
 class FuelType(models.Model):
     name = models.CharField(max_length=40, unique=True)  # Petrol, Diesel, Electric, Hybrid...
     def __str__(self): return self.name
@@ -41,7 +40,7 @@ class BodyType(models.Model):
     def __str__(self): return self.name
 
 class DriveType(models.Model):
-    name = models.CharField(max_length=40, unique=True)  # FWD, RWD, AWD/4x4...
+    name = models.CharField(max_length=40, unique=True)  # FWD, RWD and AWD
     def __str__(self): return self.name
 
 class Color(models.Model):
@@ -70,14 +69,14 @@ class Listing(models.Model):
     model = models.ForeignKey(CarModel, on_delete=models.PROTECT)
     city  = models.ForeignKey(City, on_delete=models.PROTECT)
 
-    # Headline & description
+    # Headline and description
     title = models.CharField(max_length=120)
     description = models.TextField(blank=True)
 
     # Key numbers
-    price   = models.DecimalField(max_digits=10, decimal_places=2)  # e.g. 12345.00
+    price   = models.DecimalField(max_digits=10, decimal_places=2)
     year    = models.PositiveSmallIntegerField()
-    mileage = models.PositiveIntegerField(default=0)  # in km
+    mileage = models.PositiveIntegerField(default=0)
 
     # Technicals
     fuel_type      = models.ForeignKey(FuelType, on_delete=models.PROTECT)
@@ -126,7 +125,6 @@ class Listing(models.Model):
     def __str__(self): return self.title
 
     def save(self, *args, **kwargs):
-        # keep is_active in sync with status
         if self.status == self.Status.APPROVED:
             self.is_active = True
         elif self.status in {self.Status.PENDING, self.Status.REJECTED, self.Status.EXPIRED}:

@@ -42,10 +42,9 @@ export default function MyListings() {
     try {
       let res
       if (typeof urlOrParams === 'string') {
-        // urlOrParams is a "next" or "previous" URL returned by DRF (already includes page)
+        // urlOrParams is a "next" or "previous" URL returned by DRF
         res = await api.get(urlOrParams)
       } else {
-        // first load / sorting changes: hit /listings/mine/ with params
         res = await api.get(endpoints.listingsMine, {
           params: { ordering: orderingApi, page_size: 12, ...urlOrParams }
         })
@@ -67,12 +66,11 @@ export default function MyListings() {
 
   useEffect(() => {
     fetchMine({}) // initial load
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderingApi])
 
   const goPage = (url) => {
     if (!url) return
-    fetchMine(url) // keep it internal; no URL change
+    fetchMine(url)
   }
 
   const onDelete = async (id) => {
