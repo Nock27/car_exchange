@@ -8,13 +8,13 @@ import Button from '@/components/ui/Button'
 import ListingCard, { ListingCardSkeleton } from '@/components/ui/ListingCard'
 import { api, endpoints } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
-// helpers
 
+// Return URLSearchParams obj for the current URL
 function useQuery() {
   const { search } = useLocation()
   return useMemo(() => new URLSearchParams(search), [search])
 }
-
+// normalize next/previous coming from the api
 function normalizeApiUrl(nextOrPrev) {
   // treat null/undefined/empty/"null" as no page
   if (!nextOrPrev || nextOrPrev === '' || nextOrPrev === 'null') return null
@@ -25,7 +25,7 @@ function normalizeApiUrl(nextOrPrev) {
     return nextOrPrev
   }
 }
-
+// maps the order values
 const ORDER_UI_TO_API = {
   latest: '-created_at',
   price_asc: 'price',
@@ -35,6 +35,7 @@ const ORDER_UI_TO_API = {
 }
 const ORDER_API_TO_UI = Object.fromEntries(Object.entries(ORDER_UI_TO_API).map(([k, v]) => [v, k]))
 
+// Return all the catalogs from paged result
 async function fetchAllPages(url, params = { page_size: 200 }) {
   const out = []
   let nextUrl = url
@@ -55,14 +56,13 @@ async function fetchAllPages(url, params = { page_size: 200 }) {
   return out
 }
 
-// page
 
 export default function Search() {
   const navigate = useNavigate()
   const q = useQuery()
   const auth = useAuth()
   const isAuthed = !!auth?.isAuthed
-  // sidebar catalogs
+  // sidebar fields
   const [brands, setBrands] = useState([])
   const [models, setModels] = useState([])
   const [regions, setRegions] = useState([])
@@ -94,10 +94,10 @@ export default function Search() {
   const [prevUrl, setPrevUrl] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-
+  //get the sorting from the url and map the select to it
   const orderingApi = q.get('ordering') || '-created_at'
   const orderingUi = ORDER_API_TO_UI[orderingApi] ?? 'latest'
-
+  // set the isfavorite value
   async function toggleFav(listingId, shouldFav) {
     if (!isAuthed) return
     try {
@@ -108,7 +108,7 @@ export default function Search() {
       console.error('favorite toggle failed', e)
     }
   }
-
+  // validate the params for the API
   const apiParams = useMemo(() => {
     const allowed = new Set([
       'category','brand','model','city','region',
@@ -124,6 +124,7 @@ export default function Search() {
     })
     if (!p.ordering) p.ordering = '-created_at'
     if (!p.page_size) p.page_size = 24
+    //Validate the numeric fields
     if (p.category && !/^\d+$/.test(String(p.category))) {
       delete p.category
     }
@@ -135,7 +136,6 @@ export default function Search() {
     return p
   }, [q])
 
-  // pagination helpers
   const currentPage = useMemo(() => {
     const p = parseInt(q.get('page') || '1', 10)
     return Number.isFinite(p) && p > 0 ? p : 1
@@ -155,7 +155,7 @@ export default function Search() {
   )
 
 
-  // preload catalogs (brands, regions, fuel, gearboxes)
+  // preload catalogs (brands, regions, fuel, gearboxes) for the form
   useEffect(() => {
     let alive = true
     ;(async () => {
@@ -179,7 +179,7 @@ export default function Search() {
   }, [])
 
   const { search: locationSearch } = useLocation();
-  // reflect URL into sidebar once on mount
+  // reflect URL change into sidebar once on mount
   useEffect(() => {
     setSide(s => ({
       ...s,
@@ -194,10 +194,9 @@ export default function Search() {
       region: q.get('region') || '',
       city: q.get('city') || '',
     }))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locationSearch])
 
-  // brand → models
+  // brand → models (load)
   useEffect(() => {
     const brandId = side.brand
     if (!brandId) { setModels([]); setSide(s => ({ ...s, model: '' })); return }
@@ -223,9 +222,8 @@ export default function Search() {
     }
   }, [models]);
 
-  // read model from the URL once per render
+  // if there is a valid model in the url, select it also in the form
   const urlModel = q.get('model') || '';
-
   useEffect(() => {
     // only try to apply if we have a brand and we loaded its models
     if (!side.brand) return;
@@ -240,7 +238,7 @@ export default function Search() {
   }, [models, side.brand]);  // runs when the models for the brand arrive
 
 
-  // region to cities
+  // region to cities (load)
   useEffect(() => {
     const regionId = side.region
     if (!regionId) { setCities([]); return }
@@ -256,6 +254,7 @@ export default function Search() {
     return () => { alive = false }
   }, [side.region])
 
+  // null the city if it is not there for the new selected regions
   useEffect(() => {
   if (!side.city) return
   if (cities.length === 0) return
@@ -266,7 +265,7 @@ export default function Search() {
   }, [cities])
 
   const urlCity = q.get('city') || ''
-
+  // if there is a valid city in the url, select it also in the form
   useEffect(() => {
     if (!side.region) return
     if (!urlCity) return
@@ -277,7 +276,7 @@ export default function Search() {
       setSide(s => ({ ...s, city: String(urlCity) }))
     }
   }, [cities, side.region])
-
+  //Reads all the extras from the URL
   function getExtraParamsFromQS(q) {
   const raw = q.getAll('extra');
   const vals = [];
@@ -290,7 +289,7 @@ export default function Search() {
   return vals;
 }
 
-
+  // Get all the listings
   async function fetchListings(urlOrParams) {
     setLoading(true); setError(null)
     try {
@@ -350,7 +349,7 @@ export default function Search() {
     params.delete('page')
     navigate(`/search?${params.toString()}`)
   }
-
+  // clear the sidebar form
   const resetSidebar = () => {
     setSide({
       category: '',
@@ -367,7 +366,7 @@ export default function Search() {
     })
     navigate('/search')
   }
-
+  // execute on reordering
   const onChangeOrdering = (uiValue) => {
     const ordering = ORDER_UI_TO_API[uiValue] ?? '-created_at'
     const params = new URLSearchParams(q)
@@ -375,7 +374,7 @@ export default function Search() {
     params.delete('page')
     navigate(`/search?${params.toString()}`)
   }
-
+  // fix the url for the next selected page
   const goPage = (url) => {
     if (!url) return
     const u = new URL(normalizeApiUrl(url), window.location.origin)
@@ -384,8 +383,8 @@ export default function Search() {
 
   const fmtPrice = (price) => {
     if (price == null) return '—'
-    try { return `${Number(price).toLocaleString('bg-BG')} лв` }
-    catch { return `${price} лв` }
+    try { return `${Number(price).toLocaleString('bg-BG')} €` }
+    catch { return `${price} €` }
   }
 
   return (
@@ -411,7 +410,7 @@ export default function Search() {
             </div>
           }
         />
-
+        {/* layout */}
         <div className={`grid gap-6 ${filtersOpen ? 'md:grid-cols-[320px_1fr]' : 'md:grid-cols-1'}`}>
           {filtersOpen && (
             <aside

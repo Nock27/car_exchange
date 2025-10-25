@@ -14,7 +14,7 @@ const linkInactive =
 const linkActive =
   'text-neutral-900 bg-neutral-100 ' +
   'dark:text-white dark:bg-gray-800'
-
+// Wrapper for the nav elements
 function NavItem({ to, children, onClick }) {
   return (
     <NavLink
@@ -28,7 +28,9 @@ function NavItem({ to, children, onClick }) {
 }
 
 export default function Navbar() {
+  // used for mobile view
   const [open, setOpen] = useState(false)
+  // check if the user is logged in
   const { isAuthed, user, logout } = useAuth()
 
   return (

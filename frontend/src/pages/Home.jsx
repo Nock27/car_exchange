@@ -2,10 +2,10 @@ import { Link, useNavigate } from 'react-router-dom'
 import Container from '@/components/layout/Container'
 import { useState, useEffect } from 'react'
 import { api, endpoints } from '@/lib/api'
-import ListingCard from '@/components/ui/ListingCard'
 import Card from '@/components/ui/Card'
 import TrendingListings from '@/components/home/TrendingListings'
 
+// Hero section component
 export default function Home() {
   return (
     <div className="relative overflow-hidden">
@@ -72,8 +72,7 @@ export default function Home() {
   )
 }
 
-// Short Search
-
+// Short Search componenet
 function ShortSearchCard() {
   const navigate = useNavigate()
 
@@ -106,22 +105,22 @@ function ShortSearchCard() {
   // paginator helper
   async function fetchAllPages(url, params = { page_size: 200 }) {
     const out = []
-    let nextUrl = url
+    let nextUrl = url //the current url for the request
     let nextParams = { ...params }
-    while (nextUrl) {
+    while (nextUrl) { //while there is a next page
       const { data } = await api.get(nextUrl, { params: nextParams })
       const chunk = Array.isArray(data) ? data : (data?.results || [])
       out.push(...chunk)
-      const next = data?.next || null
+      const next = data?.next || null //url to the next page
       if (next) {
         const base = api?.defaults?.baseURL || ''
         nextUrl = next.startsWith(base) ? next.slice(base.length) : next
         nextParams = {}
       } else {
-        nextUrl = null
+        nextUrl = null //when there is no next stage
       }
     }
-    return out
+    return out //return all collected results
   }
 
   // preload catalogs
@@ -204,13 +203,13 @@ function ShortSearchCard() {
       params.set('year_min', String(form.year))
       params.set('year_max', String(form.year))
     }
-
+    // default result order
     params.set('ordering', '-created_at')
     params.set('page_size', '24')
 
     navigate(`/search?${params.toString()}`)
   }
-
+  // short search
   return (
     <Card>
       <h3 className="mb-3 text-lg font-semibold text-neutral-900 dark:text-white">Quick search</h3>
@@ -308,23 +307,6 @@ const inputBase =
   'dark:bg-gray-900/80 dark:text-neutral-100 dark:placeholder-neutral-500 dark:focus:ring-brand-500'
 const inputCls = inputBase
 const selectCls = inputBase + ' appearance-none'
-
-function FlagCheck({ label, checked, onChange }) {
-  return (
-    <label className="inline-flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-200">
-      <input type="checkbox" checked={checked} onChange={onChange} className="h-4 w-4 rounded border-neutral-300 text-brand-600 focus:ring-brand-400 dark:border-gray-700" />
-      {label}
-    </label>
-  )
-}
-function Condition({ label, checked, onChange }) {
-  return (
-    <label className="inline-flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-200">
-      <input type="checkbox" checked={checked} onChange={onChange} className="h-4 w-4 rounded border-neutral-300 text-brand-600 focus:ring-brand-400 dark:border-gray-700" />
-      {label}
-    </label>
-  )
-}
 
 function FeatureCard({ title, desc }) {
   return (

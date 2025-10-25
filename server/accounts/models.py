@@ -19,6 +19,7 @@ class User(AbstractUser):
 
 
 class UserProfile(models.Model):
+    # Because of connection between the tables, if user is deleted, the user profile entry is being deleted also
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')
     # enforce uniquenesss at DB level
     phone_e164 = models.CharField(max_length=20, unique=True, null=True, blank=True, default=None)
@@ -30,7 +31,7 @@ class UserProfile(models.Model):
     def email(self):
         return getattr(self.user, 'email', '') or ''
 
-
+# automatic user profile creation - ensures every new user have aprofile
 @receiver(post_save, sender=User)
 def ensure_user_profile(sender, instance, created, **kwargs):
     if created:

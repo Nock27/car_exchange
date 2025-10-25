@@ -6,12 +6,13 @@ from .models import (
     Brand, CarModel, Listing, ListingImage,
     Category, FuelType, TransmissionType, BodyType, DriveType, Feature, Color, Favorite
 )
-
+# VIN REGEX
 VIN_RE = re.compile(r'^[A-HJ-NPR-Z0-9]{17}$')
 
 class BrandSerializer(serializers.ModelSerializer):
     class Meta:
         model = Brand
+        # Fields to return and fields to search for
         fields = ["id", "name"]
 
 
@@ -61,6 +62,7 @@ class ListingImageSerializer(serializers.ModelSerializer):
 
 
 class FeatureSerializer(serializers.ModelSerializer):
+    # Returns the name of the group like a read-only fields
     group = serializers.CharField(source="group.name", read_only=True)
 
     class Meta:
@@ -68,10 +70,13 @@ class FeatureSerializer(serializers.ModelSerializer):
         fields = ["id", "group", "name"]
 
 class ListingSerializer(serializers.ModelSerializer):
+    # List of images which are read_only
     images = ListingImageSerializer(many=True, read_only=True)
+    # checks if the given featrues exist
     features = serializers.PrimaryKeyRelatedField(queryset=Feature.objects.all(), many=True, required=False)
-    
+    # When writing
     color = serializers.PrimaryKeyRelatedField(queryset=Color.objects.all(), allow_null=True, required=False)
+    # For easy access to color name (read)
     color_detail = ColorSerializer(source="color", read_only=True)
     is_favorited = serializers.SerializerMethodField()
 
@@ -80,11 +85,13 @@ class ListingSerializer(serializers.ModelSerializer):
 
     seller_contact_email = serializers.SerializerMethodField(read_only=True)
     seller_contact_phone = serializers.SerializerMethodField(read_only=True)
+    # Again only for easy read purpose of the feature names
     features_detail = FeatureSerializer(source="features", many=True, read_only=True)
-
+    can_renew = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Listing
+        # list of the expected fields (retrun or send)
         fields = [
             "id", "title", "description", "price", "year", "mileage",
             "category", "brand", "model", "city",
@@ -95,14 +102,14 @@ class ListingSerializer(serializers.ModelSerializer):
             "vin", "video_url",
             "address", "latitude", "longitude",
             "status", "is_active",
-            "created_at", "updated_at", "expires_at",
+            "created_at", "updated_at", "expires_at", "can_renew",
             "features", "features_detail",
             "images",
             "seller_contact_email", "seller_contact_phone",
             "is_favorited",
-            "city_name", "region_name",
+            "city_name", "region_name", 
         ]
-
+        # List of the read-only fields
         read_only_fields = [
             "created_at", "updated_at", "expires_at",
             "seller_contact_email", "seller_contact_phone",
@@ -112,12 +119,12 @@ class ListingSerializer(serializers.ModelSerializer):
 
     def get_city_name(self, obj):
         return getattr(obj.city, "name", None)
-
+    # Get the region for the corresponding city, return both
     def get_region_name(self, obj):
         city = getattr(obj, "city", None)
         region = getattr(city, "region", None)
         return getattr(region, "name", None)
-
+    # Check if the current user has been added the listing to his favorites
     def get_is_favorited(self, obj):
         request = self.context.get("request")
         if not request or not getattr(request, "user", None) or not request.user.is_authenticated:
@@ -155,7 +162,7 @@ class ListingSerializer(serializers.ModelSerializer):
         if not VIN_RE.match(v):
             raise serializers.ValidationError("VIN must be 17 chars (A–Z, 0–9) without I, O, Q.")
         return v
-
+    # Checks for phone in user's profile, check for brand-model compatability and validates the coordinates if any
     def validate(self, attrs):
         request = self.context.get("request")
         if request and request.user and request.user.is_authenticated:
@@ -189,14 +196,14 @@ class ListingSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({"latitude": "Please pick a real map location."})
 
         return attrs
-    
+    # Creates the listing
     def create(self, validated_data):
         feats = validated_data.pop("features", [])
         listing = super().create(validated_data)
         if feats:
             listing.features.set(feats)
         return listing
-
+    # Updates the listings
     def update(self, instance, validated_data):
         feats = validated_data.pop("features", None)
         listing = super().update(instance, validated_data)
@@ -204,16 +211,16 @@ class ListingSerializer(serializers.ModelSerializer):
             listing.features.set(feats)
         return listing
 
-
+    # Gets the email from the user
     def get_seller_contact_email(self, obj: Listing):
         user = getattr(obj, "seller", None)
         return getattr(user, "email", "") if user else ""
-
+    # gets the phone from user_profile
     def get_seller_contact_phone(self, obj: Listing):
         user = getattr(obj, "seller", None)
         profile = getattr(user, "profile", None) if user else None
         return getattr(profile, "phone_e164", "") if profile else ""
-    
+    # Check if the current logged user has the listing in favorites
     def get_is_favorited(self, obj):
         request = self.context.get("request")
         if not request or not getattr(request, "user", None) or not request.user.is_authenticated:
@@ -222,8 +229,21 @@ class ListingSerializer(serializers.ModelSerializer):
             return Favorite.objects.filter(user=request.user, listing=obj).exists()
         except (ProgrammingError, OperationalError):
             return False
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # show status only when a flag is set in the context
+        if not self.context.get("show_status", False):
+            data.pop("status", None)
+        return data
+    
+    def get_can_renew(self, obj):
+        try:
+            return getattr(obj, "status", None) == Listing.Status.EXPIRED
+        except Exception:
+            return False
 
-
+# Returns a favorite listings
 class FavoriteSerializer(serializers.ModelSerializer):
     listing = ListingSerializer(read_only=True)
 

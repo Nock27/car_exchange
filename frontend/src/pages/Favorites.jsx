@@ -4,7 +4,7 @@ import ListingCard, { ListingCardSkeleton } from '@/components/ui/ListingCard'
 import { api, endpoints } from '@/lib/api'
 
 export default function Favorites() {
-  const [items, setItems] = useState(null)
+  const [items, setItems] = useState(null) //fav arr
 
   useEffect(() => {
     let cancelled = false
@@ -20,7 +20,7 @@ export default function Favorites() {
     })()
     return () => { cancelled = true }
   }, [])
-  const handleToggle = async (listingId, shouldFav) => {
+  const handleToggle = async (listingId, shouldFav) => { //favorite toggle
     try {
       if (shouldFav) await api.post(endpoints.favorite(listingId))
       else await api.delete(endpoints.favorite(listingId))
@@ -50,7 +50,7 @@ export default function Favorites() {
               id={listing.id}
               image={listing.images?.[0]?.image}
               title={listing.title}
-              price={`${Number(listing.price).toLocaleString('bg-BG')} лв`}
+              price={`${Number(listing.price).toLocaleString('bg-BG')} €`}
               specs={[
                 listing.fuel_type?.name,
                 listing.mileage != null ? `${Number(listing.mileage).toLocaleString('bg-BG')} km` : null,

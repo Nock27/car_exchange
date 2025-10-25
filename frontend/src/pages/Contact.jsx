@@ -2,6 +2,7 @@
 import Container from '@/components/layout/Container'
 import Card from '@/components/ui/Card'
 
+// helper to not turn the conctacts to links
 function maskLink(s, every = 3) {
   // Inserts zero-width spaces so browsers don't auto-link
   const ZWSP = '\u200B'

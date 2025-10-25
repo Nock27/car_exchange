@@ -21,7 +21,7 @@ const pinIcon = L.icon({
   popupAnchor: [1, -34],
   shadowSize: [41, 41],
 })
-
+// get all the info for catalogs
 async function fetchAllPages(url, params = { page_size: 500 }) {
   const out = []
   let nextUrl = url
@@ -81,8 +81,9 @@ export default function MapView() {
   const onF = (k, v) => setF(s => ({ ...s, [k]: v }))
 
   // map refs (safe init)
-  const mapElRef = useRef(null)
-  const mapRef = useRef(null)
+  const mapElRef = useRef(null) //DOM element of the map mountet by Leaflet
+  const mapRef = useRef(null) //holds the leaflet map instance
+  // layer for the pins, for easy manipulation
   const layerRef = useRef(L.layerGroup())
 
   const [loading, setLoading] = useState(false)
@@ -173,7 +174,7 @@ export default function MapView() {
       'price_min','price_max','year_min','year_max',
       'fuel_type','transmission',
     ].forEach(k => {
-      const v = String(f[k] ?? '').trim()
+      const v = String(f[k] ?? '').trim() //only non-empty values
       if (v) p[k] = v
     })
     return p
@@ -186,7 +187,7 @@ export default function MapView() {
     ;(async () => {
       setLoading(true); setError(null)
       try {
-        const { data } = await api.get(endpoints.listingsMap, { params: queryParams })
+        const { data } = await api.get(endpoints.listingsMap, { params: queryParams }) //array of points
         const points = Array.isArray(data) ? data : (data?.results || [])
 
         // clear previous pins
@@ -206,7 +207,7 @@ export default function MapView() {
           if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue
 
           const title = p.title || [p.brand_name, p.model_name].filter(Boolean).join(' ') || 'Listing'
-          const price = p.price != null ? `${Number(p.price).toLocaleString('bg-BG')} лв` : ''
+          const price = p.price != null ? `${Number(p.price).toLocaleString('bg-BG')} €` : ''
 
           // first image (thumbnail)
           const imgRaw =
@@ -264,7 +265,7 @@ export default function MapView() {
     })()
     return () => { alive = false }
   }, [queryParams])
-
+  // null city on region change and zoom in the map
   const onRegionChange = (v) => {
     onF('region', v)
     onF('city', '')

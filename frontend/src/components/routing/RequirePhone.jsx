@@ -11,10 +11,11 @@ export default function RequirePhone() {
     let alive = true
     const run = async () => {
       try {
+        // gets the data from the profile page and checks the phone
         const { data } = await api.get(endpoints.profile)
         const phone = (data?.phone_e164 || '').trim()
         if (!phone) {
-          // redirect to profile to set phone first
+          // redirect to profile to set phone
           navigate('/profile', { replace: true, state: { from: location.pathname } })
           return
         }
@@ -30,7 +31,7 @@ export default function RequirePhone() {
     run()
     return () => { alive = false }
   }, [navigate, location.pathname])
-
+  // When the check is done, the child routes are visualized
   if (checking) return null
   return <Outlet />
 }

@@ -13,7 +13,7 @@ import { useAuth } from '@/context/AuthContext'
 const EURO_OPTIONS = ['Euro 1','Euro 2','Euro 3','Euro 4','Euro 5','Euro 6']
 const YT_VIMEO_RE = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|vimeo\.com)\/.+/i
 
-// Fetch all pages from a DRF endpoint
+// Fetch all pages from a DRF endpoint to get the catalogs
 async function fetchAll(api, url, params = {}) {
   const out = [];
   let nextUrl = url;
@@ -37,12 +37,12 @@ async function fetchAll(api, url, params = {}) {
   return out;
 }
 
-
+// Numeric validation
 function onlyDigitsNoLeadingZero(value) {
   if (value === '' || value === null || value === undefined) return true
   return /^[1-9]\d*$/.test(String(value))
 }
-
+// Maps the API errors to readable text
 function formatApiErrors(data) {
   if (!data || typeof data === 'string') return data;
   if (data.detail) return data.detail;
@@ -63,7 +63,7 @@ function formatApiErrors(data) {
 export default function CreateListing() {
   const navigate = useNavigate()
   const { isAuthed } = useAuth()
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(false) //catalogs loading
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
 
@@ -93,7 +93,7 @@ export default function CreateListing() {
   const idOrNull   = (v) => (v === '' || v == null ? null : Number(v))
   const intOrNull  = (v) => (v === '' || v == null ? null : Number(v))
   const strOrEmpty = (v) => (v == null ? '' : String(v))
-
+  //if there are valid coordinates send address+lat+lng, otherwise only address
   const geoPayload = (form) => {
     const address = (form.address ?? '').trim();
     const hasLat = form.latitude !== '' && form.latitude != null;
@@ -161,9 +161,9 @@ export default function CreateListing() {
 
   const MAX_PHOTOS = 15;
 
-  // stable signature to dedupe
+  // stable signature to dedupe, avoid dublication
   const sig = (f) => `${f.name}|${f.size}|${f.lastModified}`;
-
+  //add photos
   function addFiles(newFiles) {
     setImages((prev) => {
       const existing = new Set(prev.map((p) => sig(p.file)));
@@ -202,6 +202,7 @@ export default function CreateListing() {
     });
   }
 
+  //function to validate the create form
   function validateCreateForm(f) {
     const e = {}
     const isEmpty = (v) => v == null || String(v).trim() === ''
@@ -215,7 +216,7 @@ export default function CreateListing() {
     if (f.power_hp && Number(f.power_hp) <= 0) e.power_hp = 'Must be greater than 0.'
     return e
   }
-
+  // map the erros from the backend to text, so to be visualized
   function normalizeServerErrorsToFields(data) {
     const map = {}
     if (data && typeof data === 'object') {
@@ -235,11 +236,11 @@ export default function CreateListing() {
   const hasError = (k) => !!errors[k] && (touched[k] || Object.keys(touched).length === 0)
   const reqMark = <span className="ml-1 text-red-500">*</span>
 
-// cleanup blob urls on unmount
+// cleanup blob urls (points to data) on unmount
 useEffect(() => {
   return () => { images.forEach((p) => URL.revokeObjectURL(p.url)); };
 }, []);
-
+  //Toggle for the feature ids
   const [selectedFeatureIds, setSelectedFeatureIds] = useState(new Set())
   const toggleFeature = (id) => {
     setSelectedFeatureIds(prev => {
@@ -357,7 +358,7 @@ useEffect(() => {
   return () => { alive = false }
 }, [form.region])
 
-
+  // Load all features, grouped
   useEffect(() => {
     let alive = true;
 
@@ -451,50 +452,18 @@ useEffect(() => {
   const onAutoSelect = ({ address, latitude, longitude }) => {
     setForm(prev => ({ ...prev, address, latitude, longitude }))
   }
-
+  //add the selected photos
   const onFiles = (e) => {
     const list = Array.from(e.target.files || []);
     addFiles(list);       // append instead of overwrite
     e.target.value = '';
   };
-
+  //check if the form can be submitted, there is a value for the req fields
   const canSubmit = useMemo(() => (
     REQUIRED.every(k => !!form[k])
   ), [form])
 
-  const validateForm = () => {
-  const errors = []
-
-  // Price > 0
-  if (form.price && Number(form.price) <= 0) {
-    errors.push("Price must be greater than 0.")
-  }
-
-  // Mileage ≥ 0
-  if (form.mileage && Number(form.mileage) < 0) {
-    errors.push("Mileage cannot be negative.")
-  }
-
-  // Year between 1930 and current year
-  const year = Number(form.year)
-  const currentYear = new Date().getFullYear()
-  if (form.year && (year < 1930 || year > currentYear)) {
-    errors.push(`Year must be between 1930 and ${currentYear}.`)
-  }
-
-  // Engine CC sanity check
-  if (form.engine_cc && Number(form.engine_cc) < 100) {
-    errors.push("Engine size (cc) must be at least 100.")
-  }
-
-  // Power HP sanity check
-  if (form.power_hp && Number(form.power_hp) < 10) {
-    errors.push("Power must be at least 10 hp.")
-  }
-
-  return errors
-  }
-
+  // Submit
   const submit = async (e) => {
     e.preventDefault()
     
@@ -587,7 +556,7 @@ useEffect(() => {
   }
 }
 
-
+  // map to safe arrays, to avoid jsx problems
   const categoriesArr = Array.isArray(categories) ? categories : []
   const brandsArr = Array.isArray(brands) ? brands : []
   const modelsArr = Array.isArray(models) ? models : []

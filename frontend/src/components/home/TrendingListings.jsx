@@ -29,8 +29,8 @@ export default function TrendingListings({ limit = 6 }) {
 
   const fmtPrice = (price) => {
     if (price == null) return '—'
-    try { return `${Number(price).toLocaleString('bg-BG')} лв` }
-    catch { return `${price} лв` }
+    try { return `${Number(price).toLocaleString('bg-BG')} €` }
+    catch { return `${price} €` }
   }
 
   if (loading) {

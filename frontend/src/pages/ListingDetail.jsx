@@ -8,15 +8,15 @@ import { api, endpoints } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 
 export default function ListingDetail() {
-  const { id } = useParams()
+  const { id } = useParams() //id from the url
   const navigate = useNavigate()
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
-  const [me, setMe] = useState(null)
-  const [listing, setListing] = useState(null)
+  const [me, setMe] = useState(null) //curent user
+  const [listing, setListing] = useState(null) // the current listing
   const [names, setNames] = useState({
     category: '', brand: '', model: '',
     fuel_type: '', transmission: '', body_type: '', drive_type: '',
@@ -28,7 +28,7 @@ export default function ListingDetail() {
 
   // helpers
 
-  // tolerant extractor
+  // id extractor
   const getId = (x) => {
     if (x == null || x === '') return ''
     if (typeof x === 'number') return String(x)
@@ -40,12 +40,12 @@ export default function ListingDetail() {
     }
     return ''
   }
-
+  //format the price
   const money = useMemo(
     () => new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }),
     []
   )
-
+  //map video link URL to embed URL for iframe
   const toEmbedUrl = (raw) => {
     if (!raw) return ''
     try {
@@ -67,9 +67,9 @@ export default function ListingDetail() {
     return ''
   }
 
-  // contact + address helpers
+  // gets first non-empty value
   const firstNonEmpty = (...vals) => vals.find(v => v != null && String(v).trim() !== '') || ''
-
+  //extract seller contacts
   const extractContact = (listing) => {
     if (!listing) return { nickname: '', email: '', phone: '' }
     const seller  = listing.seller ?? listing.owner ?? listing.user ?? {}
@@ -89,7 +89,7 @@ export default function ListingDetail() {
 
     return { nickname, email, phone }
   }
-
+  //construct an adrress
   const buildAddress = (listing, names) => {
     const parts = [
       listing.address,
@@ -107,13 +107,13 @@ export default function ListingDetail() {
   const mapsUrl = (addr) => addr ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}` : ''
 
 
-  // images list (sorted) and active index
+  // images list (sorted by order)
   const images = useMemo(() => {
     const list = Array.isArray(listing?.images) ? listing.images.slice() : []
     list.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.id ?? 0) - (b.id ?? 0))
     return list
   }, [listing])
-
+  //feature names if server returns features_detailwww
   const featureNames = Array.isArray(listing?.features_detail)
   ? listing.features_detail.map(f => f?.name || f?.label).filter(Boolean)
   : []
@@ -142,7 +142,7 @@ export default function ListingDetail() {
   // reset to first photo when navigating to a different listing id
   useEffect(() => { setActiveIdx(0) }, [id])
 
-
+  //get catalog name by id
   const fetchName = async (base, id) => {
     if (!id) return ''
     try {
@@ -153,7 +153,7 @@ export default function ListingDetail() {
     }
   }
 
-  // load me and listing
+  // load me and listing details
 
   useEffect(() => {
     let alive = true
@@ -232,28 +232,12 @@ export default function ListingDetail() {
   }, [id])
 
   // actions
-
+  //is the current user is owner of the listing
   const isOwner = (() => {
     if (!me || !listing) return false
     const ownerId = getId(listing.owner ?? listing.user ?? listing.created_by)
     return String(ownerId) === String(me.id ?? '')
   })()
-
-  const doDelete = async () => {
-    if (!listing) return
-    const ok = window.confirm('Delete this listing? This cannot be undone.')
-    if (!ok) return
-    setSaving(true)
-    try {
-      await api.delete(`${endpoints.listings}/${id}/`)
-      navigate('/my-listings')
-    } catch (e) {
-      console.error(e)
-      alert('Delete failed.')
-    } finally {
-      setSaving(false)
-    }
-  }
 
   // render
 
@@ -279,7 +263,7 @@ export default function ListingDetail() {
       </div>
     )
   }
-  const absUrl = (u) => {
+  const absUrl = (u) => { //abs url for images
   if (!u) return ''
   if (/^https?:\/\//i.test(u)) return u
   const base = (api?.defaults?.baseURL || '').replace(/\/api\/?$/, '')
@@ -499,14 +483,6 @@ export default function ListingDetail() {
                 </>
               )}
             </div>
-
-
-            {/* Owner actions */}
-            {isOwner && (
-              <div className="mt-6 flex flex-wrap gap-2">
-                {/* ... */}
-              </div>
-            )}
           </Card>
           {/* Extras / Features */}
           {featureNames.length > 0 && (

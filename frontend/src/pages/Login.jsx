@@ -27,12 +27,12 @@ export default function Login() {
   const onSubmit = async (e) => {
     e.preventDefault()
     setErrors({ username: '', password: '', form: '' })
-
+    //client validation
     let has = false
     if (!username.trim()) { setErrors((s) => ({ ...s, username: 'This field is required.' })); has = true }
     if (!password) { setErrors((s) => ({ ...s, password: 'This field is required.' })); has = true }
     if (has) return
-
+    // login through autcontext
     try {
       setSubmitting(true)
       await login({ username: username.trim(), password })

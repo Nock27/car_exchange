@@ -2,17 +2,20 @@ from django.db import IntegrityError
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import UserProfile
-
+# get the user model
 User = get_user_model()
 
 
 class RegisterSerializer(serializers.ModelSerializer):
+    # It is write only since it's not sent back after creation
     password = serializers.CharField(write_only=True, min_length=6)
 
     class Meta:
         model = User
+        # Force the exact fields to return or to accept
         fields = ["id", "username", "email", "password", "role"]
 
+    # Method to create a new user
     def create(self, validated_data):
         password = validated_data.pop("password")
         user = User(**validated_data)
@@ -20,7 +23,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         user.save()
         return user
 
-
+# Method returns info for the current user and also the user phone
 class MeSerializer(serializers.ModelSerializer):
     phone_e164 = serializers.SerializerMethodField()
 
@@ -32,7 +35,7 @@ class MeSerializer(serializers.ModelSerializer):
         prof = getattr(obj, 'profile', None)
         return getattr(prof, 'phone_e164', None) or ""
 
-
+# update phone and email of the user
 class UserProfileSerializer(serializers.ModelSerializer):
     email = serializers.EmailField()
 
@@ -50,11 +53,12 @@ class UserProfileSerializer(serializers.ModelSerializer):
         v = value.strip()
 
         import re
+        # check for valid phone number format
         if not re.fullmatch(r"\+?\d{6,15}", v):
             raise serializers.ValidationError(
                 "Enter a valid phone number in international format (e.g. +35988XXXXXXX)."
             )
-
+        # Check for phone uniqueness
         qs = UserProfile.objects.filter(phone_e164=v)
         if self.instance:
             qs = qs.exclude(pk=self.instance.pk)

@@ -12,9 +12,9 @@ import MapPicker from '@/components/MapPicker'
 import AddressAutocomplete from '@/components/AddressAutocomplete'
 
 export default function EditListing() {
-  const { id } = useParams()
+  const { id } = useParams() //listing id
   const navigate = useNavigate()
-
+  //global vars to avoid collisia
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [errorLines, setErrorLines] = useState([])
@@ -36,7 +36,7 @@ export default function EditListing() {
 
   // fallback labels for selected region/city
   const [prefillNames, setPrefillNames] = useState({ region: '', city: '' })
-
+  const [modelsLoading, setModelsLoading] = useState(false);
   // form state
   const [form, setForm] = useState({
     title: '',
@@ -63,11 +63,11 @@ export default function EditListing() {
   })
   const handle = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
 
-  // helpers
+  // css classes
   const labelTextCls = 'text-xs font-medium text-neutral-700 dark:text-neutral-300'
   const fieldStackCls = 'grid gap-1'
 
-  // Normalize possible API array shapes
+  // Normalize possible API array shapes to ordinary array
   const parseArray = (data) => {
     if (Array.isArray(data)) return data
     if (Array.isArray(data?.results)) return data.results
@@ -88,16 +88,23 @@ export default function EditListing() {
     }
     return ''
   }
-
+  //fetch catalogs
   async function fetchCatalogSimple(url) {
     const { data } = await api.get(url)
     return parseArray(data)
   }
+  //fetch catalogs wit params
   async function fetchByQuery(url, params) {
     const { data } = await api.get(url, { params })
     return parseArray(data)
   }
-
+  // load the mopdels correctly
+  async function loadModelsForBrand(brandId) {
+    if (!brandId) return [];
+    const id = Number(brandId);
+    return await fetchAllPages(endpoints.models, { brand: id, page_size: 500 });
+  }
+  //Get all the values from all the pages
   async function fetchAllPages(url, params = {}) {
     const out = []
     let nextUrl = url
@@ -117,9 +124,9 @@ export default function EditListing() {
     }
     return out
   }
-
+  // get readable label for every obj
   const labelOf = (x) => x?.name ?? x?.title ?? x?.label ?? `#${x?.id}`
-
+  // map value to whole number
   const toIntString = (val) => {
     if (val === null || val === undefined || val === '') return ''
     const n = Number(val)
@@ -127,13 +134,16 @@ export default function EditListing() {
     const m = String(val ?? '').match(/\d+/)
     return m ? m[0] : ''
   }
+  //maps empty to null
   const idOrNull = (v) => (v === '' || v == null ? null : parseInt(v, 10))
   const intOrNull = (v) => (v === '' || v == null ? null : parseInt(v, 10))
+  //Extras toggle
   const toggleFeature = (id) => {
     setSelectedFeatures(prev =>
       prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     )
   }
+  //address and coordinates payload,if there are not valid coordinates, send only city
   const geoPayload = (form) => {
     const address = (form.address ?? '').trim();
     const hasLat = form.latitude !== '' && form.latitude != null;
@@ -158,7 +168,7 @@ export default function EditListing() {
     () => Array.from({ length: new Date().getFullYear() - 1929 }, (_, i) => 1930 + i).reverse(),
     []
   )
-
+  //map server erros to readable errors
   const formatServerErrors = (payload) => {
     if (!payload || typeof payload !== 'object') return ['Saving failed. Please try again.']
     const lines = []
@@ -181,13 +191,13 @@ export default function EditListing() {
       try {
         const [cats, brs, fuels, gears, bodies, drives, cols, regs] = await Promise.all([
           fetchCatalogSimple(endpoints.categories),
-          fetchCatalogSimple(endpoints.brands),
+          fetchAllPages(endpoints.brands, { page_size: 500 }),
           fetchCatalogSimple(endpoints.fueltypes),
           fetchCatalogSimple(endpoints.transmissions),
           fetchCatalogSimple(endpoints.bodytypes),
           fetchCatalogSimple(endpoints.drivetypes),
-          fetchCatalogSimple(endpoints.colors),
-          fetchCatalogSimple(endpoints.regions),
+          fetchAllPages(endpoints.colors, { page_size: 500 }),
+          fetchAllPages(endpoints.regions, { page_size: 500 }),
         ])
         if (!alive) return
         setCategories(cats)
@@ -205,7 +215,7 @@ export default function EditListing() {
     return () => { alive = false }
   }, [])
 
-  // load listing and warm deps
+  // load listing details and warm deps
   useEffect(() => {
     let alive = true
     ;(async () => {
@@ -219,7 +229,9 @@ export default function EditListing() {
         const cityId  = getId(data.city ?? data.city_id)
         const brandId = getId(data.brand ?? data.brand_id)
         const modelId = getId(data.model ?? data.model_id)
-
+        console.log("tova e model id");
+        console.log(modelId);
+        
         // If region is missing but city is present, derive region from city detail
         if (!regionId && cityId) {
           try {
@@ -229,7 +241,7 @@ export default function EditListing() {
             console.warn('Could not backfill region from city:', e)
           }
         }
-
+        //Populate the form
         setForm({
           title: data.title || '',
           description: data.description || '',
@@ -253,14 +265,14 @@ export default function EditListing() {
           latitude:  (data.latitude  ?? '') === null ? '' : String(data.latitude  ?? ''),
           longitude: (data.longitude ?? '') === null ? '' : String(data.longitude ?? ''),
         })
-
+        //set the location fields
         setPrefillNames({
           region: data.region_name || data.region?.name || '',
           city:   data.city_name || data.city?.name || '',
         })
-
+        //get the images
         setImages(Array.isArray(data.images) ? data.images : [])
-
+        // accept array of ids, or array of obj
         if (Array.isArray(data.features)) {
           setSelectedFeatures(data.features.map(n => Number(n)).filter(Number.isFinite))
         } else if (Array.isArray(data.features_detail)) {
@@ -272,9 +284,9 @@ export default function EditListing() {
         } else {
           setSelectedFeatures([])
 }
-        if (brandId) {
+        if (brandId) { //load the dependent lists, depend on the current listing field value
           try {
-            const ms = await fetchByQuery(endpoints.models, { brand: brandId, page_size: 500 })
+            const ms = await fetchAllPages(endpoints.models, { brand: brandId, page_size: 500 })
             if (!alive) return
             setModels(ms)
           } catch (e) { console.warn('Warm models failed:', e) }
@@ -307,11 +319,14 @@ export default function EditListing() {
     let alive = true
     ;(async () => {
       try {
-        const ms = await fetchByQuery(endpoints.models, { brand: brandId, page_size: 500 })
+        const ms = await fetchAllPages(endpoints.models, { brand: Number(brandId), page_size: 500 });
         if (!alive) return
         setModels(ms)
         if (form.model && !ms.some(m => String(m.id) === String(form.model))) {
           handle('model', '')
+        }
+        if (hasAny && form.model && !ms.some(m => String(m.id) === String(form.model))) {
+          handle('model', ''); // НИКОГА null
         }
       } catch (e) {
         console.error('Load models failed:', e)
@@ -325,7 +340,7 @@ export default function EditListing() {
   const citiesArr  = Array.isArray(cities)  ? cities  : []
   const selectedRegion = regionsArr.find(r => String(r.id) === String(form.region)) || null
   const selectedCity   = citiesArr.find(c => String(c.id) === String(form.city)) || null
-
+  //if the city has cords, focus on the city
   const mapCenter = useMemo(() => {
     const lat = selectedCity?.lat ?? selectedCity?.latitude
     const lng = selectedCity?.lng ?? selectedCity?.longitude
@@ -386,7 +401,7 @@ export default function EditListing() {
     return () => { alive = false }
   }, [])
 
-  // validation
+  // Base validation
   const validateForm = (f) => {
     const errs = []
     const mustBePosInt = [
@@ -502,7 +517,7 @@ export default function EditListing() {
 
               <div className={fieldStackCls}>
                 <label htmlFor="brand" className={labelTextCls}>Brand</label>
-                <Select id="brand" value={form.brand} onChange={e => handle('brand', e.target.value)}>
+                <Select id="brand" value={form.brand ?? ''} onChange={e => handle('brand', e.target.value)}>
                   <option value="">Select brand…</option>
                   {brands.map(b => <option key={b.id} value={String(b.id)}>{labelOf(b)}</option>)}
                 </Select>
@@ -510,7 +525,7 @@ export default function EditListing() {
 
               <div className={fieldStackCls}>
                 <label htmlFor="model" className={labelTextCls}>Model</label>
-                <Select id="model" value={form.model} onChange={e => handle('model', e.target.value)} disabled={!form.brand}>
+                <Select id="model" value={form.model ?? ''} onChange={e => handle('model', e.target.value)} disabled={!form.brand}>
                   <option value="">Select model…</option>
                   {models.map(m => <option key={m.id} value={String(m.id)}>{labelOf(m)}</option>)}
                 </Select>

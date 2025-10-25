@@ -59,8 +59,9 @@ export default function AdvancedSearch() {
     // Extras
     extras: new Set(),
   })
-
+  //setter
   const handle = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
+  // keep a set(unique values) for the extras collectiopn
   const toggleExtra = (name) =>
     setForm(prev => {
       const s = new Set(prev.extras)
@@ -169,15 +170,15 @@ export default function AdvancedSearch() {
 
 
 
-
-
+  // Note: Advaced search does not fetch the result, this is done in teh /search?...
+  // from map the ui values to URL for /search
   const submit = (e) => {
     e.preventDefault()
     const p = new URLSearchParams()
 
     // Basics
     // Normalize category- numeric ID (API expects number)
-    if (form.category) {
+    if (form.category) { //make sure category is number
       if (/^\d+$/.test(String(form.category))) {
         p.set('category', String(form.category))
       } else {
@@ -228,7 +229,7 @@ export default function AdvancedSearch() {
     if (form.extras.size) {
       for (const x of form.extras) p.append('extra', x)
     }
-
+    // redirect to Search with the correct URL
     console.log('Submitting AdvancedSearch params:', Object.fromEntries(p))
     navigate(`/search?${p.toString()}`)
   }

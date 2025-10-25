@@ -10,6 +10,7 @@ class Region(models.Model):
     def __str__(self): return self.name
 
 class City(models.Model):
+    # If region is deleted, its cities are being deleted also
     region = models.ForeignKey(Region, on_delete=models.CASCADE, related_name="cities")
     name = models.CharField(max_length=100)
     # City-level markers for the map:
@@ -17,7 +18,9 @@ class City(models.Model):
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
 
     class Meta:
+        # Force DB uniqueness
         unique_together = ("region", "name")
+        # The idea is to search for this city only in the corresponding region, which speeds up the query
         indexes = [models.Index(fields=["region", "name"])]
         verbose_name_plural = "Cities"
 

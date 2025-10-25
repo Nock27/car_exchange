@@ -1,9 +1,12 @@
 import django_filters as df
 from django.db.models import Q
 from .models import Listing
-
+# This file maps the filters from the URL to db filters to the DB, it generates SQL filters
+# Example maps: ?brand=5&model=12 to brand_id=5 AND model_id=12
+# List what query parameters the API accepts and how to implement them on the Listing querysets
 class ListingFilter(df.FilterSet):
     # Existing ranges
+    # NumberFilter - cast to number
     price_min   = df.NumberFilter(field_name="price", lookup_expr="gte")
     price_max   = df.NumberFilter(field_name="price", lookup_expr="lte")
     year_min    = df.NumberFilter(field_name="year", lookup_expr="gte")
@@ -16,7 +19,7 @@ class ListingFilter(df.FilterSet):
     power_from  = df.NumberFilter(field_name="power_hp", lookup_expr="gte")
     power_to    = df.NumberFilter(field_name="power_hp", lookup_expr="lte")
 
-    # region (through city)
+    # region (through city) 
     region      = df.NumberFilter(method="filter_region")
 
     # euro standard (substring, case-insensitive; matches "Euro 6", "Euro 6d", etc.)
@@ -45,7 +48,7 @@ class ListingFilter(df.FilterSet):
 
     def filter_search(self, queryset, name, value):
         return queryset.filter(title__icontains=value) | queryset.filter(description__icontains=value)
-
+    # Normalize to list of non-empty values
     def _parse_values(self):
         vals = []
         for pname in ("extra", "features"):
@@ -55,7 +58,7 @@ class ListingFilter(df.FilterSet):
                     if t:
                         vals.append(t)
         return vals
-
+    # filter by extra
     def filter_extras_any(self, qs, name, value):
         values = self._parse_values()
         if not values:

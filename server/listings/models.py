@@ -13,6 +13,7 @@ class Category(models.Model):
     def __str__(self): return self.name
 
     class Meta:
+        # mnojestveno chislo
         verbose_name_plural = "Categories"
 
 class Brand(models.Model):
@@ -20,10 +21,13 @@ class Brand(models.Model):
     def __str__(self): return self.name
 
 class CarModel(models.Model):
+    # Delete all corresponding models when delete an brand
     brand = models.ForeignKey(Brand, on_delete=models.CASCADE, related_name="models")
     name = models.CharField(max_length=80)
     class Meta:
+        # Unique combination brand-model
         unique_together = ("brand", "name")
+        # Search faster for model only in the corresponding brand
         indexes = [models.Index(fields=["brand", "name"])]
     def __str__(self): return f"{self.brand} {self.name}"
 
@@ -47,13 +51,16 @@ class Color(models.Model):
     name = models.CharField(max_length=40, unique=True)
     def __str__(self): return self.name
 
+# Returns the path for uploading images for the corresponding listing
 def listing_image_path(instance, filename):
     return f"listings/{instance.listing_id}/{filename}"
 
+# Returns the listing expiration date
 def default_expires():
     return timezone.now() + timedelta(days=45)
 
 class Listing(models.Model):
+    # enum for the listing status
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"
         APPROVED = "approved", "Approved"
@@ -61,7 +68,9 @@ class Listing(models.Model):
         EXPIRED  = "expired", "Expired"
 
     # Ownership & categorization
+    # If the seller is deleted, all its listings must be deleted also.
     seller = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="listings")
+    # If there is a listing with this category, a listing cannot be deleted
     category = models.ForeignKey(Category, on_delete=models.PROTECT)
 
     # Make / model / location
@@ -111,7 +120,7 @@ class Listing(models.Model):
     # FEATURES
     features = models.ManyToManyField("Feature", blank=True, related_name="listings")
 
-
+    # Indexes for often used filters
     class Meta:
         indexes = [
             models.Index(fields=["status", "is_active"]),
@@ -123,19 +132,20 @@ class Listing(models.Model):
         ]
 
     def __str__(self): return self.title
-
+    # After every save it synchronizes the is_active and status field
     def save(self, *args, **kwargs):
         if self.status == self.Status.APPROVED:
             self.is_active = True
         elif self.status in {self.Status.PENDING, self.Status.REJECTED, self.Status.EXPIRED}:
             self.is_active = False
         super().save(*args, **kwargs)
-
+    # Ensures that the approved listing is with is_active=TRUE
     def approve(self):
         self.status = self.Status.APPROVED
         self.is_active = True
-        self.save(update_fields=["status", "is_active"])
-
+        self.expires_at = default_expires()
+        self.save(update_fields=["status", "is_active", "expires_at"])
+    # Ensures that the rejected listing is with is_active=FALSE
     def reject(self):
         self.status = self.Status.REJECTED
         self.is_active = False
@@ -164,6 +174,7 @@ class Feature(models.Model):
         return f"{self.group.name} · {self.name}"
 
 class Favorite(models.Model):
+    # If user is deleted, all of the records for favorite listings are also delted
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,

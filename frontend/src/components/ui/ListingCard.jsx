@@ -14,6 +14,7 @@ export default function ListingCard({
   onToggleFavorite = () => {},
   onView = () => {},
   showFavorite = true,
+  status = null,
 }) {
   const handleFavClick = (e) => {
     e.preventDefault()
@@ -24,13 +25,22 @@ export default function ListingCard({
   const showFavButton = Boolean(showFavorite && isAuthed)
 
   return (
-    <Card className="p-4">
+    <Card className="p-4 relative">
       <div className="grid grid-cols-[120px_1fr] gap-4">
-        <div className="overflow-hidden rounded-xl bg-neutral-100 dark:bg-gray-800">
+        <div className="relative overflow-hidden rounded-xl bg-neutral-100 dark:bg-gray-800">
+          <div className="aspect-square" />
           {image ? (
-            <img src={image} alt={title} className="h-24 w-full object-cover" />
+            <img
+              src={image}
+              alt={title}
+              loading="lazy"
+              decoding="async"
+              width="120"
+              height="120"
+              className="absolute inset-0 h-full w-full object-cover object-center"
+            />
           ) : (
-            <div className="flex h-24 w-full items-center justify-center text-xs text-neutral-500">
+            <div className="absolute inset-0 flex items-center justify-center text-xs text-neutral-500">
               No image
             </div>
           )}
@@ -60,6 +70,18 @@ export default function ListingCard({
               </div>
             </div>
           </div>
+          {/* Status badge (only shows on My Listings, where you'll pass status) */}
+          {status && (
+            <span
+              className={`mt-1 w-fit rounded-full px-2 py-0.5 text-xs font-medium
+                ${status === 'approved'
+                  ? 'bg-green-100 text-green-800'
+                  : status === 'pending'
+                  ? 'bg-amber-100 text-amber-800'
+                  : 'bg-gray-200 text-gray-800'}`}>
+              {status}
+            </span>
+          )}
           <div className="mt-1 truncate text-sm text-neutral-600 dark:text-neutral-300">{specs}</div>
           <div className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">{location}</div>
           <div className="mt-3">

@@ -1,15 +1,17 @@
-from rest_framework import viewsets, permissions, status, decorators, response, filters
+from rest_framework import viewsets, permissions, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Prefetch, Q
+from django.utils import timezone
+from django.core.exceptions import FieldError
 
 from .permissions import IsSellerOrReadOnly, IsOwnerOrAdmin
 from .filters import ListingFilter
 
 from .models import (
     Brand, CarModel, Category, FuelType, TransmissionType, BodyType, DriveType,
-    Listing, ListingImage, FeatureGroup, Feature, Color, Favorite
+    Listing, ListingImage, Feature, Color, Favorite
 )
 from .serializers import (
     BrandSerializer, CarModelSerializer,
@@ -27,13 +29,13 @@ class BrandViewSet(viewsets.ReadOnlyModelViewSet):
 class CarModelViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = CarModelSerializer
     permission_classes = [permissions.AllowAny]
-
+    # filter the model by brand
     def get_queryset(self):
         qs = CarModel.objects.select_related("brand").order_by("name")
         brand = self.request.query_params.get("brand")
         return qs.filter(brand_id=brand) if brand else qs
 
-
+# CRUD for listings, only the user or staff can delete
 class ListingViewSet(viewsets.ModelViewSet):
     serializer_class = ListingSerializer
     permission_classes = [IsSellerOrReadOnly, IsOwnerOrAdmin]
@@ -42,7 +44,7 @@ class ListingViewSet(viewsets.ModelViewSet):
     filterset_class = ListingFilter
     ordering_fields = ["created_at", "price", "year", "mileage"]
     ordering = ["-created_at"]
-
+    # On create it assignes the listing to the current logged in user
     def perform_create(self, serializer):
         # Assign logged-in user as seller and set initial status to 'pending'
         serializer.save(seller=self.request.user, status="pending")
@@ -73,11 +75,15 @@ class ListingViewSet(viewsets.ModelViewSet):
         )
         u = self.request.user
         if not u.is_authenticated:
-            return qs.filter(status="approved", is_active=True)
+            return qs.filter(
+                status="approved",
+                is_active=True,
+                expires_at__gt=timezone.now()
+            )
         if u.is_staff or u.is_superuser:
             return qs
         return qs.filter(Q(status="approved", is_active=True) | Q(seller=u))
-
+    # Handles image upload
     @action(detail=True, methods=["post"], url_path="upload_image")
     def upload_image(self, request, pk=None):
         listing = self.get_object()
@@ -101,7 +107,7 @@ class ListingViewSet(viewsets.ModelViewSet):
             order=listing.images.count()
         )
         return Response(ListingImageSerializer(img).data, status=status.HTTP_201_CREATED)
-
+    # Handles image deletion
     @action(detail=True, methods=["delete"], url_path=r"images/(?P<image_id>\d+)")
     def delete_image(self, request, pk=None, image_id=None):
         listing = self.get_object()
@@ -116,7 +122,7 @@ class ListingViewSet(viewsets.ModelViewSet):
 
         img.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
+    # Handles fields for the map view
     @action(detail=False, methods=["get"], url_path="map")
     def map_points(self, request, *args, **kwargs):
         """
@@ -142,7 +148,7 @@ class ListingViewSet(viewsets.ModelViewSet):
         if region and region.isdigit():
             qs = qs.filter(city__region_id=int(region))
 
-        # ranges
+        # Ranges validation
         t = p.get("price_min")
         if t and t.isdigit():
             qs = qs.filter(price__gte=int(t))
@@ -188,7 +194,7 @@ class ListingViewSet(viewsets.ModelViewSet):
             })
 
         return Response({"results": data})
-
+    # Handles the status toggle for favorite listings
     @action(detail=True, methods=["post", "delete", "get"], permission_classes=[permissions.IsAuthenticated])
     def favorite(self, request, pk=None):
         listing = self.get_object()
@@ -201,16 +207,48 @@ class ListingViewSet(viewsets.ModelViewSet):
             return Response({"favorited": False}, status=status.HTTP_204_NO_CONTENT)
         exists = Favorite.objects.filter(user=user, listing=listing).exists()
         return Response({"favorited": exists})
-    
+    # Returns a list with the listings of the current user
     @action(detail=False, methods=["get"], permission_classes=[permissions.IsAuthenticated])
     def mine(self, request):
         qs = self.get_queryset().filter(seller=request.user)
+        try:
+            qs = self.filter_queryset(qs)  # тук се прилага OrderingFilter и т.н.
+        except FieldError:
+            # махаме параметъра и продължаваме със стойността по подразбиране
+            q = request.query_params.copy()
+            q.pop("ordering", None)
+            request._request.GET = q
+            qs = self.get_queryset().filter(seller=request.user)
+            qs = self.filter_queryset(qs)
+        
         page = self.paginate_queryset(qs)
         if page is not None:
             ser = self.get_serializer(page, many=True)
             return self.get_paginated_response(ser.data)
         ser = self.get_serializer(qs, many=True)
         return Response(ser.data)
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        ctx["show_status"] = (self.action == "mine")   # visible only on /api/listings/mine/
+        return ctx
+    
+    @action(detail=True, methods=["post"])
+    def renew(self, request, pk=None):
+        listing = self.get_object()
+
+        if listing.status != Listing.Status.EXPIRED:
+            return Response(
+                {"detail": "Only expired listing can be renewed."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Change the status to pending
+        listing.status = Listing.Status.PENDING
+        listing.is_active = False 
+        listing.save(update_fields=["status", "is_active"])
+
+        return Response({"ok": True, "status": listing.status})
 
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):

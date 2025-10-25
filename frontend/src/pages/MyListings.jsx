@@ -7,13 +7,14 @@ import Select from '@/components/ui/Select'
 import ListingCard, { ListingCardSkeleton } from '@/components/ui/ListingCard'
 import { api, endpoints } from '@/lib/api'
 
+// DRF can return n/p absolute url, so we return relative
 function normalizeApiUrl(nextOrPrev) {
   if (!nextOrPrev) return null
   const base = api?.defaults?.baseURL || ''
   try { return nextOrPrev.startsWith(base) ? nextOrPrev.slice(base.length) : nextOrPrev }
   catch { return nextOrPrev }
 }
-
+//Order values
 const ORDER_UI_TO_API = {
   latest: '-created_at',
   price_asc: 'price',
@@ -25,7 +26,7 @@ const ORDER_API_TO_UI = Object.fromEntries(Object.entries(ORDER_UI_TO_API).map((
 
 export default function MyListings() {
   const navigate = useNavigate()
-
+  //list with users listings
   const [items, setItems] = useState([])
   const [count, setCount] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -36,7 +37,7 @@ export default function MyListings() {
 
   const [orderingUi, setOrderingUi] = useState('latest')
   const orderingApi = useMemo(() => ORDER_UI_TO_API[orderingUi] ?? '-created_at', [orderingUi])
-
+  //Fetches "my listings"
   async function fetchMine(urlOrParams) {
     setLoading(true); setError(null)
     try {
@@ -64,15 +65,29 @@ export default function MyListings() {
     }
   }
 
+  async function onRenew(id) {
+    try {
+      await api.post(endpoints.renew(id))
+      if (nextUrl || prevUrl) {
+        fetchMine({}) // fallback
+      } else {
+        fetchMine({})
+      }
+    } catch (e) {
+      console.error(e)
+      alert('Renew failed')
+    }
+  }
+
   useEffect(() => {
     fetchMine({}) // initial load
   }, [orderingApi])
-
+  //navigation beteween the pages
   const goPage = (url) => {
     if (!url) return
     fetchMine(url)
   }
-
+  //delete an listing
   const onDelete = async (id) => {
     if (!confirm('Delete this listing? This cannot be undone.')) return
     try {
@@ -87,8 +102,8 @@ export default function MyListings() {
 
   const fmtPrice = (price) => {
     if (price == null) return '—'
-    try { return `${Number(price).toLocaleString('bg-BG')} лв` }
-    catch { return `${price} лв` }
+    try { return `${Number(price).toLocaleString('bg-BG')} €` }
+    catch { return `${price} €` }
   }
 
   return (
@@ -161,8 +176,15 @@ export default function MyListings() {
                       image={image}
                       id={item.id}
                       showFavorite={false}
+                      status={item.status}
                     />
                     <div className="flex gap-2 md:flex-col md:items-stretch">
+                      {/* {console.log(`statusa e ${item.status}`)} */}
+                      {item.status === 'expired' && (
+                        <Button className="w-full" onClick={() => onRenew(item.id)}>
+                          Renew for approval
+                        </Button>
+                      )}
                       <Button as={Link} to={`/listings/${item.id}/edit`} className="w-full md:w-auto">
                         Edit
                       </Button>

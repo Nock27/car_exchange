@@ -30,14 +30,14 @@ export default function App() {
         <Route path="/map" element={<MapView />} />
         <Route path="/search" element={<Search />} />
 
-        {/* BOTH paths resolve to the advanced search page */}
         <Route path="/advanced-search" element={<AdvancedSearch />} />
-        <Route path="/advanced" element={<AdvancedSearch />} />
+        {/* <Route path="/advanced" element={<AdvancedSearch />} /> */}
         <Route path="/listings/:id" element={<ListingDetail />} />
 
 
-        {/* Protected routes */}
+        {/* Protected routes, require authentication */}
         <Route element={<RequireAuth />}>
+          {/* create listing requires also phone number */}
           <Route element={<RequirePhone />}>
             <Route path="/create-listing" element={<CreateListing />} />
           </Route>
@@ -51,7 +51,7 @@ export default function App() {
         <Route path="/register" element={<Register />} />
         <Route path="*" element={<NotFound />} />
 
-        {/* Non interactive pages paths */}
+        {/* Non interactive pages */}
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/contact" element={<Contact />} />

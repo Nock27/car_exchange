@@ -6,8 +6,9 @@ from .serializers import RegionSerializer, CitySerializer
 # Create your views here.
 
 
-
+# Only GET is supported
 class RegionViewSet(viewsets.ReadOnlyModelViewSet):
+    # all regions sorted by name
     queryset = Region.objects.all().order_by("name")
     serializer_class = RegionSerializer
     permission_classes = [permissions.AllowAny]
@@ -17,6 +18,7 @@ class CityViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
+        # all cities that belong to corresponding region ordered by name
         qs = City.objects.select_related("region").order_by("name")
         region = self.request.query_params.get("region")
         return qs.filter(region_id=region) if region else qs
